@@ -3,30 +3,41 @@
 import type React from "react"
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Building2, FileText, Home, UserCog, LayoutDashboard } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 
 const AppSidebar = () => {
     const pathname = usePathname();
+    const [empresa, setEmpresa] = useState('');
+
+    useEffect(() => {
+        const empresaFromStorage = localStorage.getItem('empresaSeleccionada');
+        let empresaData = empresaFromStorage ? JSON.parse(empresaFromStorage) : null;
+        setEmpresa(empresaData);
+    }, []);
 
     const menuItems = [
         {
             title: "Empresa",
             url: "/company",
             icon: Home,
-        },
-        {
+        }
+    ];
+
+    if (empresa) {
+        menuItems.push({
             title: "Dashboard",
             url: "/dashboard",
             icon: LayoutDashboard,
-        },
-        {
+        });
+        menuItems.push({
             title: "Perfil",
             url: "/profile",
             icon: UserCog,
-        },
-    ];
+        });
+    }
 
     return (
         <Sidebar>

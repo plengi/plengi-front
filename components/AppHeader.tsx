@@ -20,7 +20,7 @@ const AppHeader = () => {
                     />
                 </div>
                 <Button variant="outline" size="icon" className="border-green-200 hover:bg-green-50 hover:border-green-300">
-                <Bell className="h-4 w-4 text-green-600" />
+                    <Bell className="h-4 w-4 text-green-600" />
                 </Button>
             </div>
         </header>

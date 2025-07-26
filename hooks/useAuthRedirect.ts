@@ -12,8 +12,7 @@ export function useAuthRedirect(authRedirect?: string, guestRedirect: string = '
     useEffect(() => {
         const checkAuth = async () => {
             try {
-                // const token = await AsyncStorage.getItem('authToken');
-                const token = true;
+                const token = await AsyncStorage.getItem('authToken');
 
                 if (token) {
                     setIsAuthenticated(true);

@@ -1,26 +1,47 @@
 "use client"
 
-import type React from "react"
-import { useState } from "react"
-import Image from "next/image"
-import { Chrome, Facebook } from "lucide-react"
+import type React from "react";
+import { useState } from "react";
+import Image from "next/image";
+import apiClient from '@/app/api/apiClient';
+import { Chrome, Facebook } from "lucide-react";
 import Link from "next/link" // Import Link for navigation
-
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
-    const [email, setEmail] = useState("")
-    const [password, setPassword] = useState("")
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [password, setPassword] = useState("secret");
+    const [email, setEmail] = useState("admin@argon.com");
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault()
-        // Aquí iría la lógica de autenticación real
-        console.log("Email:", email)
-        console.log("Contraseña:", password)
-        alert("Intento de inicio de sesión. Revisa la consola para ver los datos.")
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+        
+        try {
+            const response = await apiClient.post('/login', {
+                email,
+                password,
+            });
+
+            localStorage.setItem('authToken', response.data.access_token);
+            localStorage.setItem('empresaSeleccionada', JSON.stringify(response.data.empresa));
+
+            if (response.data.empresa) {
+                window.location.href = '/dashboard';
+            } else {
+                window.location.href = '/company';
+            }
+            
+        } catch (err) {
+            console.log('err: ',err);
+        } finally {
+            setLoading(false);
+        }
     }
 
     const handleGoogleLogin = () => {
