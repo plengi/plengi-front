@@ -14,6 +14,7 @@ const AppSidebar = () => {
 
     useEffect(() => {
         const empresaFromStorage = localStorage.getItem('empresaSeleccionada');
+        
         let empresaData = empresaFromStorage ? JSON.parse(empresaFromStorage) : null;
         setEmpresa(empresaData);
     }, []);
@@ -42,18 +43,20 @@ const AppSidebar = () => {
     return (
         <Sidebar>
             <SidebarHeader>
-                <div className="flex items-center gap-2 px-4 py-2">
+                <div className="flex items-center gap-2 px-4 py-2 justify-center">
                     <Building2 className="h-8 w-8 text-green-600" />
                     <div>
-                    <h2 className="text-lg font-semibold text-green-800">PLENGI</h2>
-                    <p className="text-xs text-green-600">Presupuestos PRO</p>
+                        <h2 className="text-lg font-semibold text-green-800">
+                            { empresa.razon_social ? empresa.razon_social : 'PLENGI' }
+                        </h2>
+                        
                     </div>
                 </div>
             </SidebarHeader>
 
             <SidebarContent>
                 <SidebarGroup>
-                    <SidebarGroupLabel className="text-green-700">Navegación</SidebarGroupLabel>
+                    <SidebarGroupLabel className="text-green-700 justify-center">Navegación</SidebarGroupLabel>
                     <SidebarGroupContent>
                         <SidebarMenu>
                             {menuItems.map((item) => (
