@@ -152,7 +152,7 @@ export default function TableEmpresas({ empresas, setEmpresas }: TablaEmpresasPr
                                                         <MoreHorizontal className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
+                                                <DropdownMenuContent align="center">
                                                     <DropdownMenuItem 
                                                         onClick={() => seleccionarEmpresa(empresa)}
                                                         disabled={loadingEmpresaHash === empresa.hash}

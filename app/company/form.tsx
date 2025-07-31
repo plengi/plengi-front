@@ -6,6 +6,8 @@ import { useEffect, useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { Toaster } from "@/components/ui/toaster";
 import { 
     Plus,
     Wrench,
@@ -44,6 +46,7 @@ interface FormEmpresasProps {
 
 export default function CompanyForm({ setEmpresas, empresaEditar, setEmpresaEditar, mostrarBotonCrear }: FormEmpresasProps) {
 
+    const { toast } = useToast();
     const [error, setError] = useState('');
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -108,19 +111,32 @@ export default function CompanyForm({ setEmpresas, empresaEditar, setEmpresaEdit
                     setEmpresas(prev => prev.map(emp => 
                         emp.id === formData.id ? responseData.data : emp
                     ));
+                    toast({
+                        variant: "success",
+                        title: "Empresa creada",
+                        description: "La empresa ha sido creada correctamente.",
+                    });
                 }
             } else {
                 const response = await apiClient.post('/empresas', formData);
                 const responseData = response.data;
 
                 if (response.data.success) {
-                    // setEmpresas(prev => [...prev, responseData.data]);
                     setEmpresas(prev => [responseData.data, ...prev]);
+                    toast({
+                        variant: "success",
+                        title: "Empresa actualizada",
+                        description: "La empresa ha sido actualizada correctamente.",
+                    });
                 }
             }
             handleClose();
         } catch (err) {
-            console.log('err: ',err);
+            toast({
+                variant: "destructive",
+                title: "Error Empresa",
+                description: "Error al crear empresa.",
+            });
         } finally {
             setLoading(false);
         }
@@ -148,7 +164,7 @@ export default function CompanyForm({ setEmpresas, empresaEditar, setEmpresaEdit
         nit: "",
         });
         if (setEmpresaEditar) setEmpresaEditar(null);
-    };
+    };    
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -277,7 +293,7 @@ export default function CompanyForm({ setEmpresas, empresaEditar, setEmpresaEdit
 
             </DialogContent>
 
-
+            <Toaster />
         </Dialog>
     );
 }

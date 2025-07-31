@@ -5,8 +5,9 @@ import type React from "react"
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Building2, FileText, Home, UserCog, LayoutDashboard } from "lucide-react";
-import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import { User, Building2, Home, UserCog, LayoutDashboard } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarFooter } from "@/components/ui/sidebar";
 
 const AppSidebar = () => {
     const pathname = usePathname();
@@ -47,7 +48,7 @@ const AppSidebar = () => {
                     <Building2 className="h-8 w-8 text-green-600" />
                     <div>
                         <h2 className="text-lg font-semibold text-green-800">
-                            { empresa.razon_social ? empresa.razon_social : 'PLENGI' }
+                            { empresa && empresa.razon_social ? empresa.razon_social : 'PLENGI' }
                         </h2>
                         
                     </div>
@@ -77,6 +78,24 @@ const AppSidebar = () => {
                     </SidebarGroupContent>
                 </SidebarGroup>
             </SidebarContent>
+
+            <SidebarFooter>
+                <SidebarMenu>
+                    <SidebarMenuItem>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <SidebarMenuButton className="hover:bg-green-50">
+                                    <User className="text-green-600" />
+                                    <span>Ing. Juan Pérez</span>
+                                </SidebarMenuButton>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent side="top" className="w-[--radix-popper-anchor-width]">
+                                <DropdownMenuItem>Cerrar Sesión</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+            </SidebarFooter>
         </Sidebar>
     );
 };
