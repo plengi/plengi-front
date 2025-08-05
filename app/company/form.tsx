@@ -99,37 +99,28 @@ export default function CompanyForm({ setEmpresas, empresaEditar, setEmpresaEdit
         setLoading(true);
         setError('');
     
-        if (!validateForm()) return;
+        if (!validateForm()) {
+            setLoading(false);
+            return;
+        };
 
         try {
-            //EDITAR EMPRESA
-            if (formData.id) {
-                const response = await apiClient.put('/empresas', formData);
-                const responseData = response.data;
+            const method = formData.id ? 'put' : 'post';
+            const endpoint = '/empresas';
+            const action = formData.id ? 'actualizada' : 'creada';
 
-                if (response.data.success) {
-                    setEmpresas(prev => prev.map(emp => 
-                        emp.id === formData.id ? responseData.data : emp
-                    ));
-                    toast({
-                        variant: "success",
-                        title: "Empresa creada",
-                        description: "La empresa ha sido creada correctamente.",
-                    });
-                }
-            } else {
-                const response = await apiClient.post('/empresas', formData);
-                const responseData = response.data;
+            const response = await apiClient[method](endpoint, formData);
+            const responseData = response.data;
 
-                if (response.data.success) {
-                    setEmpresas(prev => [responseData.data, ...prev]);
-                    toast({
-                        variant: "success",
-                        title: "Empresa actualizada",
-                        description: "La empresa ha sido actualizada correctamente.",
-                    });
-                }
+            if (response.data.success) {
+                setEmpresas(prev => [responseData.data, ...prev]);
+                toast({
+                    variant: "success",
+                    title: `Empresa ${action}`,
+                    description: `La empresa ha sido ${action} correctamente.`,
+                });
             }
+
             handleClose();
         } catch (err) {
             toast({
@@ -192,7 +183,7 @@ export default function CompanyForm({ setEmpresas, empresaEditar, setEmpresaEdit
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-2">
+                    <div className="space-y-0">
                         <Label htmlFor="razon_social" className="text-green-800">
                             Razón social <span className="text-red-500">*</span>
                         </Label>
@@ -208,7 +199,7 @@ export default function CompanyForm({ setEmpresas, empresaEditar, setEmpresaEdit
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
+                        <div className="space-y-0">
                             <Label htmlFor="nit" className="text-green-800">
                                 Nit <span className="text-red-500">*</span>
                             </Label>
@@ -223,7 +214,7 @@ export default function CompanyForm({ setEmpresas, empresaEditar, setEmpresaEdit
                             />
                         </div>
 
-                        <div className="space-y-2">
+                        <div className="space-y-0">
                             <Label htmlFor="nit" className="text-green-800">
                                 Email <span className="text-red-500">*</span>
                             </Label>
@@ -240,7 +231,7 @@ export default function CompanyForm({ setEmpresas, empresaEditar, setEmpresaEdit
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">   
-                        <div className="space-y-2">
+                        <div className="space-y-0">
                             <Label htmlFor="nit" className="text-green-800">
                                 Direción
                             </Label>
@@ -254,7 +245,7 @@ export default function CompanyForm({ setEmpresas, empresaEditar, setEmpresaEdit
                             />
                         </div>
 
-                        <div className="space-y-2">
+                        <div className="space-y-0">
                             <Label htmlFor="nit" className="text-green-800">
                                 Telefono
                             </Label>

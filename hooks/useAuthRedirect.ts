@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export function useAuthRedirect(authRedirect?: string, guestRedirect: string = '/login') {
     const router = useRouter();
@@ -10,9 +9,10 @@ export function useAuthRedirect(authRedirect?: string, guestRedirect: string = '
     const [isAuthenticated, setIsAuthenticated] = useState(false);
 
     useEffect(() => {
-        const checkAuth = async () => {
+        const checkAuth = () => {
             try {
-                const token = await AsyncStorage.getItem('authToken');
+                // Usamos localStorage en lugar de AsyncStorage
+                const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
 
                 if (token) {
                     setIsAuthenticated(true);

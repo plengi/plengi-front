@@ -4,7 +4,7 @@ import type React from "react"
 import AppSidebar from '@/components/AppSidebar';
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
-export default function ProjectsLayout({ children }: { children: React.ReactNode }) {
+export default function MaterialesLayout({ children }: { children: React.ReactNode }) {
 
     return (
         <SidebarProvider>
