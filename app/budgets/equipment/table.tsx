@@ -1,7 +1,7 @@
 'use client';
 
 import type React from "react";
-import FormMateriales from './form';
+import FormEquipos from './form';
 import apiClient from '@/app/api/apiClient';
 import { useEffect, useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export interface Materiales {
+export interface Equipos {
     id: number;
     nombre: string;
     unidad_medida: string;
@@ -31,38 +31,38 @@ export interface Materiales {
     tipo_producto: number;
 }
 
-interface TablaMaterialesProps {
-    materiales: Materiales[];
-    setMateriales: React.Dispatch<React.SetStateAction<Materiales[]>>;
+interface TablaEquiposProps {
+    equipos: Equipos[];
+    setEquipos: React.Dispatch<React.SetStateAction<Equipos[]>>;
 }
 
-export default function TableMateriales({ materiales, setMateriales }: TablaMaterialesProps) {
+export default function TableEquipos({ equipos, setEquipos }: TablaEquiposProps) {
 
     const { toast } = useToast();
     const [start, setStart] = useState(0);
     const [length, setLength] = useState(10);
     const [totalRecords, setTotalRecords] = useState(0);
-    const [promedioMateriales, setPromedioMateriales] = useState(0);
-    const [loadingMateriales, setLoadingMateriales] = useState(true);
+    const [promedioEquipos, setPromedioEquipos] = useState(0);
+    const [loadingEquipos, setLoadingEquipos] = useState(true);
     const [materialAEliminar, setMaterialAEliminar] = useState<number | null>(null);
-    const [materialesEditar, setMaterialesEditar] = useState<Materiales | null>(null);
+    const [equiposEditar, setEquiposEditar] = useState<Equipos | null>(null);
     const [loadingMaterialHash, setLoadingMaterialHash] = useState<String | null>(null);
 
     useEffect(() => {
-        const fetchMateriales = async () => {  
-            setLoadingMateriales(true);
+        const fetchEquipos = async () => {  
+            setLoadingEquipos(true);
             try {
-                const response = await apiClient.get(`/productos?tipo_producto=0&start=${start}&length=${length}`);
-                setMateriales(response.data.data);
+                const response = await apiClient.get(`/productos?tipo_producto=3&start=${start}&length=${length}`);
+                setEquipos(response.data.data);
                 setTotalRecords(response.data.iTotalRecords);
-                setPromedioMateriales(response.data.valor_promedio);
+                setPromedioEquipos(response.data.valor_promedio);
             } catch (err) {
             } finally {
-                setLoadingMateriales(false);
+                setLoadingEquipos(false);
             }
         };
 
-        fetchMateriales();
+        fetchEquipos();
     }, [start, length]);
 
     const handlePreviousPage = () => {
@@ -101,16 +101,16 @@ export default function TableMateriales({ materiales, setMateriales }: TablaMate
 
             toast({
                 variant: "success",
-                title: `Materiales eliminado`,
+                title: `Equipos eliminado`,
                 description: `El material ha sido eliminado correctamente.`,
             });
             
-            // Actualiza la lista de materiales después de eliminar
-            const response = await apiClient.get(`/productos?tipo_producto=0&start=${start}&length=${length}`);
+            // Actualiza la lista de equipos después de eliminar
+            const response = await apiClient.get(`/productos?tipo_producto=3&start=${start}&length=${length}`);
             
-            setMateriales(response.data.data);
+            setEquipos(response.data.data);
             setTotalRecords(response.data.iTotalRecords);
-            setPromedioMateriales(response.data.valor_promedio);
+            setPromedioEquipos(response.data.valor_promedio);
             
         } catch (error) {
             console.error("Error al eliminar el material:", error);
@@ -124,10 +124,10 @@ export default function TableMateriales({ materiales, setMateriales }: TablaMate
     const totalPages = Math.ceil(totalRecords / length);
 
     return (<>
-        <FormMateriales 
-            setMateriales={setMateriales} 
-            materialesEditar={materialesEditar}
-            setMaterialesEditar={setMaterialesEditar}
+        <FormEquipos 
+            setEquipos={setEquipos} 
+            equiposEditar={equiposEditar}
+            setEquiposEditar={setEquiposEditar}
             mostrarBotonCrear={false}
         />
 
@@ -135,12 +135,12 @@ export default function TableMateriales({ materiales, setMateriales }: TablaMate
 
             <Card className="border-green-200 bg-gradient-to-br from-white to-green-50">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-green-800">Total Materiales</CardTitle>
+                    <CardTitle className="text-sm font-medium text-green-800">Total Equipos</CardTitle>
                     <Package className="h-4 w-4 text-green-600" />
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold text-green-900">{totalRecords}</div>
-                    <p className="text-xs text-green-600">Materiales disponibles</p>
+                    <p className="text-xs text-green-600">Equipos disponibles</p>
                 </CardContent>
             </Card>
 
@@ -150,7 +150,7 @@ export default function TableMateriales({ materiales, setMateriales }: TablaMate
                     <ArrowUpDown className="h-4 w-4 text-green-600" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-green-900">{promedioMateriales}</div>
+                    <div className="text-2xl font-bold text-green-900">{promedioEquipos}</div>
                     <p className="text-xs text-green-600">Por unidad</p>
                 </CardContent>
             </Card>
@@ -159,9 +159,9 @@ export default function TableMateriales({ materiales, setMateriales }: TablaMate
 
         <Card className="border-green-200">
             <CardHeader>
-                <CardTitle className="text-green-900">Lista de materiales</CardTitle>
+                <CardTitle className="text-green-900">Lista de equipos</CardTitle>
                 <p className="text-green-700">
-                    Lista completa de materiales disponibles para presupuestos
+                    Lista completa de equipos disponibles para presupuestos
                 </p>
             </CardHeader>
             <CardContent>
@@ -178,20 +178,20 @@ export default function TableMateriales({ materiales, setMateriales }: TablaMate
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {loadingMateriales ? (
+                            {loadingEquipos ? (
                                 <TableRow>
                                     <TableCell colSpan={6} className="text-center">
                                         <Loader2 className="h-8 w-8 animate-spin mx-auto text-green-600" />
                                     </TableCell>
                                 </TableRow>
-                            ) : materiales.length === 0 ? (
+                            ) : equipos.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={5} className="text-center text-green-900">
-                                        No hay materiales registradas
+                                        No hay equipos registradas
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                materiales.map((material) => (
+                                equipos.map((material) => (
 
                                     <TableRow key={material.id} className="hover:bg-green-50/50">
                                         <TableCell className="font-medium text-green-900">{material.nombre}</TableCell>
@@ -210,7 +210,7 @@ export default function TableMateriales({ materiales, setMateriales }: TablaMate
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="center">
                                                     <DropdownMenuItem
-                                                        onClick={() => setMaterialesEditar(material)}
+                                                        onClick={() => setEquiposEditar(material)}
                                                     >
                                                         <Edit className="h-4 w-4 mr-2" />
                                                         Editar
@@ -235,7 +235,7 @@ export default function TableMateriales({ materiales, setMateriales }: TablaMate
                     {totalRecords > 0 && (
                         <div className="flex items-center justify-between px-4 py-2 bg-green-50 border-t border-green-200">
                             <div className="text-sm text-green-700">
-                                Mostrando {start + 1} a {Math.min(start + length, totalRecords)} de {totalRecords} materiales
+                                Mostrando {start + 1} a {Math.min(start + length, totalRecords)} de {totalRecords} equipos
                             </div>
                             <div className="flex items-center space-x-2">
                                 <Button 

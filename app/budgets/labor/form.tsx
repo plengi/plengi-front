@@ -31,7 +31,7 @@ import {
     SelectValue
 } from "@/components/ui/select";
 
-export interface Materiales {
+export interface Labores {
     id: number;
     nombre: string;
     unidad_medida: string;
@@ -40,11 +40,11 @@ export interface Materiales {
     tipo_producto: number;
 }
 
-interface FormMaterialesProps {
-    materialesEditar?: Materiales | null;
+interface FormLaboresProps {
+    laboresEditar?: Labores | null;
     mostrarBotonCrear?: true | false;
-    setMateriales: React.Dispatch<React.SetStateAction<Materiales[]>>;
-    setMaterialesEditar?: React.Dispatch<React.SetStateAction<Materiales | null>>;
+    setLabores: React.Dispatch<React.SetStateAction<Labores[]>>;
+    setLaboresEditar?: React.Dispatch<React.SetStateAction<Labores | null>>;
 }
 
 const units = [
@@ -71,7 +71,7 @@ const proveedores = [
     { id: "4", nombre: 'Proveedor D' },
 ];
 
-export default function CompanyForm({ setMateriales, materialesEditar, setMaterialesEditar, mostrarBotonCrear }: FormMaterialesProps) {
+export default function CompanyForm({ setLabores, laboresEditar, setLaboresEditar, mostrarBotonCrear }: FormLaboresProps) {
 
     const { toast } = useToast();
     const [error, setError] = useState('');
@@ -87,28 +87,28 @@ export default function CompanyForm({ setMateriales, materialesEditar, setMateri
         unidad_medida: "",
         valor: 0,
         tipo_proveedor: "",
-        tipo_producto: 0,
+        tipo_producto: 2,
     });
 
     useEffect(() => {
-        if (materialesEditar) {
+        if (laboresEditar) {
             setFormData({
-                id: materialesEditar.id,
-                nombre: materialesEditar.nombre,
-                unidad_medida: materialesEditar.unidad_medida,
-                valor: materialesEditar.valor,
-                tipo_proveedor: materialesEditar.tipo_proveedor,
-                tipo_producto: materialesEditar.tipo_producto
+                id: laboresEditar.id,
+                nombre: laboresEditar.nombre,
+                unidad_medida: laboresEditar.unidad_medida,
+                valor: laboresEditar.valor,
+                tipo_proveedor: laboresEditar.tipo_proveedor,
+                tipo_producto: laboresEditar.tipo_producto
             });
             
             // Actualizar los estados de los selects
-            setSelectedUnidadMedida(materialesEditar.unidad_medida);
-            setSelectedProveedor(materialesEditar.tipo_proveedor);
-            setSelectedTipoProducto(materialesEditar.tipo_producto.toString()); // Asegúrate de convertirlo a string si es número
+            setSelectedUnidadMedida(laboresEditar.unidad_medida);
+            setSelectedProveedor(laboresEditar.tipo_proveedor);
+            setSelectedTipoProducto(laboresEditar.tipo_producto.toString()); // Asegúrate de convertirlo a string si es número
             
             setOpen(true);
         }
-    }, [materialesEditar]);
+    }, [laboresEditar]);
 
     const handleOpenChange = (isOpen: boolean) => {
         setOpen(isOpen);
@@ -120,9 +120,9 @@ export default function CompanyForm({ setMateriales, materialesEditar, setMateri
             unidad_medida: "",
             valor: 0,
             tipo_proveedor: "",
-            tipo_producto: 0,
+            tipo_producto: 2,
         });
-        if (setMaterialesEditar) setMaterialesEditar(null);
+        if (setLaboresEditar) setLaboresEditar(null);
         }
     };
 
@@ -149,11 +149,11 @@ export default function CompanyForm({ setMateriales, materialesEditar, setMateri
             const responseData = response.data;
 
             if (response.data.success) {
-                setMateriales(prev => [responseData.data, ...prev]);
+                setLabores(prev => [responseData.data, ...prev]);
                 toast({
                     variant: "success",
-                    title: `Materiales ${action}`,
-                    description: `El material ha sido ${action} correctamente.`,
+                    title: `Labores ${action}`,
+                    description: `El labores ha sido ${action} correctamente.`,
                 });
             }
 
@@ -161,8 +161,8 @@ export default function CompanyForm({ setMateriales, materialesEditar, setMateri
         } catch (err) {
             toast({
                 variant: "destructive",
-                title: "Error Materiales",
-                description: "Error al crear material.",
+                title: "Error Labores",
+                description: "Error al crear labores.",
             });
         } finally {
             setLoading(false);
@@ -187,12 +187,12 @@ export default function CompanyForm({ setMateriales, materialesEditar, setMateri
             unidad_medida: "",
             valor: 0,
             tipo_proveedor: "",
-            tipo_producto: 0,
+            tipo_producto: 2,
         });
         setSelectedUnidadMedida("");
         setSelectedProveedor("");
         setSelectedTipoProducto("");
-        if (setMaterialesEditar) setMaterialesEditar(null);
+        if (setLaboresEditar) setLaboresEditar(null);
     };   
 
     return (
@@ -202,7 +202,7 @@ export default function CompanyForm({ setMateriales, materialesEditar, setMateri
                 {mostrarBotonCrear ? (
                     <Button className="gap-2 bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-200">
                         <Plus className="h-4 w-4" />
-                        Nuevo Material
+                        Nueva mano de obra
                     </Button>
                     ) : ('')
                 }
@@ -213,10 +213,10 @@ export default function CompanyForm({ setMateriales, materialesEditar, setMateri
                 <DialogHeader>
                     <DialogTitle className="text-green-900 flex items-center gap-2 text-3xl">
                         <Building2 className="h-5 w-5 text-green-600" />
-                        {formData.id ? 'Editar Materiales' : 'Crear nuevo material'}
+                        {formData.id ? 'Editar Labores' : 'Crear nuevo labores'}
                     </DialogTitle>
                     <DialogDescription className="text-green-600">
-                        Completa la información del material para {formData.id ? 'editarlo' : 'crearlo'}
+                        Completa la información de la mano de obra para {formData.id ? 'editarlo' : 'crearlo'}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -228,7 +228,7 @@ export default function CompanyForm({ setMateriales, materialesEditar, setMateri
                         <Input
                             id="nombre"
                             name="nombre"
-                            placeholder="Material A"
+                            placeholder="Mano de obra A"
                             value={formData.nombre}
                             onChange={(e) => handleInputChange("nombre", e.target.value)}
                             className="border-green-200 focus:border-green-400 focus:ring-green-400"
@@ -267,7 +267,7 @@ export default function CompanyForm({ setMateriales, materialesEditar, setMateri
                         </div>
 
                         <div className="space-y-0">
-                            <Label htmlFor="material-price" className="text-green-800">
+                            <Label htmlFor="labores-price" className="text-green-800">
                                 Valor Unitario <span className="text-red-500">*</span>
                             </Label>
                             <Input
@@ -318,7 +318,7 @@ export default function CompanyForm({ setMateriales, materialesEditar, setMateri
 
                         <div className="space-y-0">
                             <Label htmlFor="section-select" className="text-green-800">
-                                Tipo de Material
+                                Tipo de mano de obra
                             </Label>
                             <div className="flex gap-2">
                                 <Select
@@ -328,7 +328,7 @@ export default function CompanyForm({ setMateriales, materialesEditar, setMateri
                                     }}
                                 >
                                     <SelectTrigger className="border-green-200 focus:border-green-400 focus:ring-green-400">
-                                        <SelectValue placeholder="Seleccionar tipo de material" />
+                                        <SelectValue placeholder="Seleccionar tipo de mano de obra" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {productosTipo.map((tipos) => (
@@ -361,7 +361,7 @@ export default function CompanyForm({ setMateriales, materialesEditar, setMateri
                         >
                             {loading ? (
                                 <Loader className="h-4 w-4 animate-spin" />
-                            ) : formData.id ? 'Actualizar Material' : 'Crear Material'}
+                            ) : formData.id ? 'Actualizar Labores' : 'Crear Labores'}
                         </Button>
                     </DialogFooter>
 

@@ -27,7 +27,7 @@ export default function MaterialesPage() {
     }
 
     return (<>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-green-100 px-4 bg-gradient-to-r from-green-50 to-white">
+        <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center gap-2 border-b border-green-100 px-4 bg-gradient-to-r from-green-50 to-white">
             <SidebarTrigger className="-ml-1 text-green-600 hover:bg-green-100" />
             <div className="flex flex-1 items-center gap-4">
                 <h1 className="text-3xl font-bold tracking-tight text-green-900">Materiales</h1>
