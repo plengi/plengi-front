@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, BarChart3, HardHat, Package, Plus, Search, Trash2, Truck, Wrench } from "lucide-react";
+import apiClient from '@/app/api/apiClient';
 
 // Constantes
 const activityTypes = [
@@ -48,69 +49,45 @@ interface SelectedInsumo {
   // Campos adicionales según el tipo
   wastePercentage?: number // Para materiales
   performance?: number // Para mano de obra y equipos
+  supplierType?: string
+  projectId?: number
 };
 
-// Datos de muestra para materiales
-const materialsData = [
-    {
-        id: 1,
-        name: "Cemento Portland",
-        unit: "Saco 50kg",
-        unitPrice: 12500,
-        stock: 120,
-        supplier: "Cementos del Norte",
-        lastUpdate: "2023-10-15",
-        type: "Cemento",
-    },
-];
+interface ApiProducto {
+    id: number;
+    id_proyecto: number;
+    tipo_proveedor: string;
+    nombre: string;
+    unidad_medida: string;
+    tipo_producto: string;
+    valor: number;
+    cantidad_productos?: number;
+    total_productos?: number;
+    detalle?: any;
+    created_at: string;
+    updated_at: string;
+}
 
-// Datos de muestra para equipos
-const equipmentData = [
-    {
-        id: 1,
-        name: "Retroexcavadora CAT 420F",
-        unit: "Hora",
-        unitPrice: 45000,
-        availability: "Disponible",
-        condition: "Bueno",
-        lastMaintenance: "2023-09-15",
-        nextMaintenance: "2023-12-15",
-        type: "Excavación",
-    },
-];
+interface ApiResponse {
+    success: boolean;
+    draw: number;
+    iTotalRecords: number;
+    iTotalDisplayRecords: number;
+    data: ApiProducto[];
+    valor_promedio: string;
+    perPage: number;
+    message: string;
+}
 
-// Datos de muestra para mano de obra
-const laborData = [
-    {
-        id: 1,
-        name: "Maestro Albañil",
-        unit: "Jornal",
-        unitPrice: 45000,
-        specialty: "Albañilería",
-        experience: "10 años",
-        availability: "Disponible",
-        certification: "Certificado SENCE",
-        type: "Especializado",
-    },
-];
-
-// Datos de muestra para transporte
-const transportData = [
-    {
-        id: 1,
-        name: "Camión Tolva 12m³",
-        unit: "Viaje",
-        unitPrice: 85000,
-        capacity: "12 m³",
-        driver: "Juan Pérez",
-        availability: "Disponible",
-        license: "A5",
-        type: "Carga",
-    },
-];
+// Mapeo de tipos de insumo a tipo_producto
+const INSUMO_TYPE_MAP = {
+    materials: "0", // Materiales
+    equipment: "1", // Equipos
+    labor: "2",     // Mano de obra
+    transport: "3"  // Transporte
+};
 
 export default function NewAPUPage() {
-
     const [selectedInsumos, setSelectedInsumos] = useState<SelectedInsumo[]>([]);
     const [formData, setFormData] = useState({
         name: "",
@@ -122,23 +99,79 @@ export default function NewAPUPage() {
     });
     const [insumoType, setInsumoType] = useState("materials");
     const [searchTerm, setSearchTerm] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [apiInsumos, setApiInsumos] = useState<any[]>([]);
+    const [pagination, setPagination] = useState({
+        start: 0,
+        length: 10,
+        draw: 1
+    });
 
-    // Combinar todos los insumos disponibles
-    const allInsumos = [
-        ...materialsData.map((item) => ({ ...item, category: "materials" })),
-        ...equipmentData.map((item) => ({ ...item, category: "equipment" })),
-        ...laborData.map((item) => ({ ...item, category: "labor" })),
-        ...transportData.map((item) => ({ ...item, category: "transport" })),
-    ];
+    // Función para cargar insumos desde la API
+    const fetchInsumos = async () => {
+        if (!searchTerm && searchTerm === "") {
+            setApiInsumos([]);
+            return;
+        }
 
-    const filteredInsumos = allInsumos
-    .filter(
-      (insumo) =>
-        insumo.category === insumoType &&
-        (insumo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          insumo.supplier?.toLowerCase().includes(searchTerm.toLowerCase())),
-    )
-    .slice(0, 5);
+        setIsLoading(true);
+        try {
+            const tipoProducto = INSUMO_TYPE_MAP[insumoType as keyof typeof INSUMO_TYPE_MAP];
+            const response = await apiClient.get<ApiResponse>(`/productos`, {
+                params: {
+                    tipo_producto: tipoProducto,
+                    search: searchTerm,
+                    start: pagination.start,
+                    length: pagination.length,
+                    draw: pagination.draw
+                }
+            });
+            
+            // Mapea la respuesta de la API al formato esperado
+            const mappedInsumos = response.data.data.map((item: ApiProducto) => ({
+                id: item.id,
+                name: item.nombre,
+                unit: item.unidad_medida,
+                unitPrice: item.valor,
+                type: item.tipo_producto,
+                category: insumoType,
+                supplierType: item.tipo_proveedor,
+                averageValue: response.data.valor_promedio,
+                projectId: item.id_proyecto,
+                details: item.detalle
+            }));
+            
+            if (pagination.start > 0) {
+                setApiInsumos(prev => [...prev, ...mappedInsumos]);
+            } else {
+                setApiInsumos(mappedInsumos);
+            }
+        } catch (error) {
+            console.error("Error al cargar insumos:", error);
+            setApiInsumos([]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Efecto para buscar insumos cuando cambia el término de búsqueda o el tipo
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (searchTerm || searchTerm === "") {
+                setPagination(prev => ({...prev, start: 0, draw: 1}));
+                fetchInsumos();
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [searchTerm, insumoType]);
+
+    // Efecto para cargar más resultados
+    useEffect(() => {
+        if (pagination.start > 0) {
+            fetchInsumos();
+        }
+    }, [pagination.start, pagination.draw]);
 
     const handleInputChange = (field: string, value: string | number) => {
         setFormData((prev) => ({ ...prev, [field]: value }))
@@ -184,8 +217,7 @@ export default function NewAPUPage() {
     const totalGeneral = Object.values(categorySubtotals).reduce((sum, subtotal) => sum + subtotal, 0);
 
     const addInsumo = (insumo: any) => {
-        // Verificar si el insumo ya está en la lista
-        const exists = selectedInsumos.some((item) => item.id === insumo.id && item.category === insumo.category)
+        const exists = selectedInsumos.some((item) => item.id === insumo.id && item.category === insumoType);
 
         if (exists) {
         alert("Este insumo ya ha sido agregado")
@@ -196,10 +228,10 @@ export default function NewAPUPage() {
         ...insumo,
         quantity: 1,
         total: insumo.unitPrice,
-        // Inicializar campos adicionales según el tipo
-        ...(insumo.category === "materials" && { wastePercentage: 0 }),
-        ...(insumo.category === "labor" && { performance: 1 }),
-        ...(insumo.category === "equipment" && { performance: 1 }),
+        ...(insumoType === "materials" && { wastePercentage: 0 }),
+        ...((insumoType === "labor" || insumoType === "equipment") && { performance: 1 }),
+        supplierType: insumo.supplierType,
+        projectId: insumo.projectId
         }
 
         setSelectedInsumos([...selectedInsumos, newInsumo])
@@ -209,25 +241,20 @@ export default function NewAPUPage() {
         const updatedInsumos = [...selectedInsumos]
         const insumo = updatedInsumos[index]
 
-        // Actualizar el campo
         ;(insumo as any)[field] = value
 
-        // Recalcular el total según el tipo de insumo
         if (insumo.category === "materials") {
-        const wasteMultiplier = 1 + (insumo.wastePercentage || 0) / 100
-        insumo.total = insumo.quantity * insumo.unitPrice * wasteMultiplier
+            const wasteMultiplier = 1 + (insumo.wastePercentage || 0) / 100
+            insumo.total = insumo.quantity * insumo.unitPrice * wasteMultiplier
         } else if (insumo.category === "labor" || insumo.category === "equipment") {
-        // Fórmula inversamente proporcional: Total = (Cantidad × Precio Unitario) / Rendimiento
-        const performanceDivisor = insumo.performance || 1
-        insumo.total = (insumo.quantity * insumo.unitPrice) / performanceDivisor
+            const performanceDivisor = insumo.performance || 1
+            insumo.total = (insumo.quantity * insumo.unitPrice) / performanceDivisor
         } else {
-        // Para transporte (sin modificadores)
-        insumo.total = insumo.quantity * insumo.unitPrice
+            insumo.total = insumo.quantity * insumo.unitPrice
         }
 
         setSelectedInsumos(updatedInsumos)
 
-        // Actualizar el precio unitario total en el formulario
         const newTotal = updatedInsumos.reduce((sum, item) => sum + item.total, 0)
         handleInputChange("unitPrice", newTotal)
     }
@@ -236,7 +263,6 @@ export default function NewAPUPage() {
         const updatedInsumos = selectedInsumos.filter((_, i) => i !== index)
         setSelectedInsumos(updatedInsumos)
 
-        // Actualizar el precio unitario total
         const newTotal = updatedInsumos.reduce((sum, item) => sum + item.total, 0)
         handleInputChange("unitPrice", newTotal)
     }
@@ -271,7 +297,14 @@ export default function NewAPUPage() {
         }
     }
 
-    // Nuevo orden de las categorías: 1. Equipos, 2. Materiales, 3. Transporte, 4. Mano de obra
+    const loadMoreResults = () => {
+        setPagination(prev => ({
+            start: prev.start + prev.length,
+            length: prev.length,
+            draw: prev.draw + 1
+        }));
+    };
+
     const categoryOrder = ["equipment", "materials", "transport", "labor"]
 
     return (
@@ -297,7 +330,6 @@ export default function NewAPUPage() {
             </div>
 
             <Card className="border-green-200">
-
                 <CardHeader>
                     <CardTitle className="text-green-900 flex items-center gap-2">
                         <BarChart3 className="h-5 w-5 text-green-600" />
@@ -310,7 +342,6 @@ export default function NewAPUPage() {
 
                 <CardContent>
                     <form id="apu-form" onSubmit={handleSubmit} className="space-y-6">
-
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-0">
                                 <Label htmlFor="apu-code" className="text-green-800">
@@ -408,14 +439,11 @@ export default function NewAPUPage() {
                                 className="border-green-200 focus:border-green-400 focus:ring-green-400"
                             />
                         </div>
-
                     </form>
                 </CardContent>
-
             </Card>
 
             <Card className="border-green-200">
-
                 <CardHeader>
                     <CardTitle className="text-green-900 flex items-center gap-2">
                         <Package className="h-5 w-5 text-green-600" />
@@ -427,9 +455,7 @@ export default function NewAPUPage() {
                 </CardHeader>
 
                 <CardContent className="space-y-6">
-
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
                         <div className="space-y-0">
                             <Label htmlFor="insumo-type" className="text-green-800">
                                 Tipo de Insumo
@@ -462,50 +488,66 @@ export default function NewAPUPage() {
                                 />
                             </div>
                         </div>
-
                     </div>
 
                     {/* Resultados de búsqueda */}
-                    {searchTerm && filteredInsumos.length > 0 && (
+                    {isLoading ? (
+                        <div className="text-center py-3 text-green-600 bg-green-50/50 rounded-lg border border-green-100">
+                            Buscando insumos...
+                        </div>
+                    ) : searchTerm && apiInsumos.length > 0 ? (
                         <div className="border border-green-100 rounded-lg overflow-hidden">
                         <Table>
-                            <TableHeader>
-                            <TableRow className="bg-green-50">
-                                <TableHead className="text-green-800">Insumo</TableHead>
-                                <TableHead className="text-green-800">Unidad</TableHead>
-                                <TableHead className="text-green-800">Precio</TableHead>
-                                <TableHead className="text-green-800 w-[80px]">Acción</TableHead>
-                            </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                            {filteredInsumos.map((insumo) => (
-                                <TableRow key={`${insumo.category}-${insumo.id}`} className="hover:bg-green-50/50">
-                                <TableCell className="font-medium text-green-900">{insumo.name}</TableCell>
-                                <TableCell>{insumo.unit}</TableCell>
-                                <TableCell>{formatPrice(insumo.unitPrice)}</TableCell>
-                                <TableCell>
-                                    <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => addInsumo(insumo)}
-                                    className="h-8 w-8 p-0"
-                                    >
-                                    <Plus className="h-4 w-4 text-green-600" />
-                                    </Button>
-                                </TableCell>
-                                </TableRow>
-                            ))}
-                            </TableBody>
-                        </Table>
-                        </div>
-                    )}
 
-                    {searchTerm && filteredInsumos.length === 0 && (
-                        <div className="text-center py-3 text-green-600 bg-green-50/50 rounded-lg border border-green-100">
-                        No se encontraron insumos que coincidan con la búsqueda
+                            <TableHeader>
+                                <TableRow className="bg-green-50">
+                                    <TableHead className="text-green-800">Insumo</TableHead>
+                                    <TableHead className="text-green-800">Unidad</TableHead>
+                                    <TableHead className="text-green-800">Precio</TableHead>
+                                    <TableHead className="text-green-800">Tipo Proveedor</TableHead>
+                                    <TableHead className="text-green-800 w-[80px]">Acción</TableHead>
+                                </TableRow>
+                            </TableHeader>
+
+                            <TableBody>
+                                {apiInsumos.map((insumo) => (
+                                    <TableRow key={`${insumoType}-${insumo.id}`} className="hover:bg-green-50/50">
+                                        <TableCell className="font-medium text-green-900">{insumo.name}</TableCell>
+                                        <TableCell>{insumo.unit}</TableCell>
+                                        <TableCell>{formatPrice(insumo.unitPrice)}</TableCell>
+                                        <TableCell>{insumo.supplierType}</TableCell>
+                                        <TableCell>
+                                            <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => addInsumo(insumo)}
+                                            className="h-8 w-8 p-0"
+                                            >
+                                            <Plus className="h-4 w-4 text-green-600" />
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+
+                        </Table>
+                        <div className="p-2 border-t border-green-200 bg-green-50 text-center">
+                            <Button 
+                                variant="ghost" 
+                                onClick={loadMoreResults}
+                                disabled={isLoading}
+                                className="text-green-600 hover:bg-green-100"
+                            >
+                                {isLoading ? 'Cargando...' : 'Cargar más resultados'}
+                            </Button>
                         </div>
-                    )}
+                        </div>
+                    ) : searchTerm && !isLoading && apiInsumos.length === 0 ? (
+                        <div className="text-center py-3 text-green-600 bg-green-50/50 rounded-lg border border-green-100">
+                            No se encontraron insumos que coincidan con la búsqueda
+                        </div>
+                    ) : null}
 
                     {/* Insumos seleccionados agrupados por categoría */}
                     <div className="space-y-4">
@@ -530,9 +572,7 @@ export default function NewAPUPage() {
                                                 </div>
                                             </div>
 
-                                            {/* Tabla de insumos de la categoría */}
                                             <Table>
-
                                                 <TableHeader>
                                                     <TableRow className="bg-green-50">
                                                         <TableHead className="text-green-800">Insumo</TableHead>
@@ -627,10 +667,8 @@ export default function NewAPUPage() {
                                                         )
                                                     })}
                                                 </TableBody>
-
                                             </Table>
                                         </div>
-
                                     );
                                 })}
                             </div>
@@ -640,10 +678,8 @@ export default function NewAPUPage() {
                             </div>
                         )}
                     </div>
-
                 </CardContent>
             </Card>
-
         </div>
     );
 }
