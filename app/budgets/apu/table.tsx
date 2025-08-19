@@ -1,7 +1,6 @@
 'use client';
 
 import type React from "react";
-import FormEquipos from './form';
 import apiClient from '@/app/api/apiClient';
 import { useEffect, useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
@@ -12,47 +11,46 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowUpDown, Package, Plus, MoreHorizontal, Eye, Edit, Trash2, Unplug, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-export interface Equipos {
+export interface Apus {
     id: number;
+    codigo: string;
     nombre: string;
-    unidad_medida: string;
-    valor: number;
-    tipo_proveedor: string;
-    tipo_producto: number;
+    descripcion: string;
+    unidad_medida: number;
+    valor_total: number;
 }
 
-interface TablaEquiposProps {
-    equipos: Equipos[];
-    setEquipos: React.Dispatch<React.SetStateAction<Equipos[]>>;
+interface TablaApusProps {
+    apus: Apus[];
+    setApus: React.Dispatch<React.SetStateAction<Apus[]>>;
 }
 
-export default function TableEquipos({ equipos, setEquipos }: TablaEquiposProps) {
+export default function TableApus({ apus, setApus }: TablaApusProps) {
 
     const { toast } = useToast();
     const [start, setStart] = useState(0);
     const [length, setLength] = useState(10);
     const [totalRecords, setTotalRecords] = useState(0);
-    const [promedioEquipos, setPromedioEquipos] = useState(0);
-    const [loadingEquipos, setLoadingEquipos] = useState(true);
-    const [materialAEliminar, setMaterialAEliminar] = useState<number | null>(null);
-    const [equiposEditar, setEquiposEditar] = useState<Equipos | null>(null);
-    const [loadingMaterialHash, setLoadingMaterialHash] = useState<String | null>(null);
+    const [promedioApus, setPromedioApus] = useState(0);
+    const [loadingApus, setLoadingApus] = useState(true);
+    const [apuAEliminar, setAPUAEliminar] = useState<number | null>(null);
+    const [loadingAPUHash, setLoadingAPUHash] = useState<String | null>(null);
 
     useEffect(() => {
-        const fetchEquipos = async () => {  
-            setLoadingEquipos(true);
+        const fetchApus = async () => {  
+            setLoadingApus(true);
             try {
-                const response = await apiClient.get(`/productos?tipo_producto=3&start=${start}&length=${length}`);
-                setEquipos(response.data.data);
+                const response = await apiClient.get(`/apus?start=${start}&length=${length}`);
+                setApus(response.data.data);
                 setTotalRecords(response.data.iTotalRecords);
-                setPromedioEquipos(response.data.valor_promedio);
+                setPromedioApus(response.data.valor_promedio);
             } catch (err) {
             } finally {
-                setLoadingEquipos(false);
+                setLoadingApus(false);
             }
         };
 
-        fetchEquipos();
+        fetchApus();
     }, [start, length]);
 
     const handlePreviousPage = () => {
@@ -76,37 +74,37 @@ export default function TableEquipos({ equipos, setEquipos }: TablaEquiposProps)
         setStart(lastPageStart);
     };
 
-    const eliminarMaterial = (id_material: number) => {
-        setMaterialAEliminar(id_material);
+    const eliminarAPU = (id_apu: number) => {
+        setAPUAEliminar(id_apu);
     };
 
     const confirmarEliminacion = async () => {
-        if (!materialAEliminar) return;
+        if (!apuAEliminar) return;
 
         try {
-            setLoadingMaterialHash(materialAEliminar.toString());
+            setLoadingAPUHash(apuAEliminar.toString());
             await apiClient.delete('/productos', {
-                data: { id: materialAEliminar } // Axios usa 'data' para el cuerpo en DELETE
+                data: { id: apuAEliminar } // Axios usa 'data' para el cuerpo en DELETE
             });
 
             toast({
                 variant: "success",
-                title: `Equipos eliminado`,
-                description: `El material ha sido eliminado correctamente.`,
+                title: `Apus eliminado`,
+                description: `El apu ha sido eliminado correctamente.`,
             });
             
-            // Actualiza la lista de equipos después de eliminar
-            const response = await apiClient.get(`/productos?tipo_producto=3&start=${start}&length=${length}`);
+            // Actualiza la lista de apus después de eliminar
+            const response = await apiClient.get(`/productos?tipo_producto=0&start=${start}&length=${length}`);
             
-            setEquipos(response.data.data);
+            setApus(response.data.data);
             setTotalRecords(response.data.iTotalRecords);
-            setPromedioEquipos(response.data.valor_promedio);
+            setPromedioApus(response.data.valor_promedio);
             
         } catch (error) {
-            console.error("Error al eliminar el material:", error);
+            console.error("Error al eliminar el apu:", error);
         } finally {
-            setLoadingMaterialHash(null);
-            setMaterialAEliminar(null);
+            setLoadingAPUHash(null);
+            setAPUAEliminar(null);
         }
     };
 
@@ -114,23 +112,17 @@ export default function TableEquipos({ equipos, setEquipos }: TablaEquiposProps)
     const totalPages = Math.ceil(totalRecords / length);
 
     return (<>
-        <FormEquipos 
-            setEquipos={setEquipos} 
-            equiposEditar={equiposEditar}
-            setEquiposEditar={setEquiposEditar}
-            mostrarBotonCrear={false}
-        />
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
 
             <Card className="border-green-200 bg-gradient-to-br from-white to-green-50">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-green-800">Total Equipos</CardTitle>
+                    <CardTitle className="text-sm font-medium text-green-800">Total Apus</CardTitle>
                     <Package className="h-4 w-4 text-green-600" />
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold text-green-900">{totalRecords}</div>
-                    <p className="text-xs text-green-600">Equipos disponibles</p>
+                    <p className="text-xs text-green-600">Apus disponibles</p>
                 </CardContent>
             </Card>
 
@@ -140,7 +132,7 @@ export default function TableEquipos({ equipos, setEquipos }: TablaEquiposProps)
                     <ArrowUpDown className="h-4 w-4 text-green-600" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-green-900">{promedioEquipos}</div>
+                    <div className="text-2xl font-bold text-green-900">{promedioApus}</div>
                     <p className="text-xs text-green-600">Por unidad</p>
                 </CardContent>
             </Card>
@@ -149,9 +141,9 @@ export default function TableEquipos({ equipos, setEquipos }: TablaEquiposProps)
 
         <Card className="border-green-200">
             <CardHeader>
-                <CardTitle className="text-green-900">Lista de equipos</CardTitle>
+                <CardTitle className="text-green-900">Lista de apus</CardTitle>
                 <p className="text-green-700">
-                    Lista completa de equipos disponibles para presupuestos
+                    Lista completa de apus disponibles para presupuestos
                 </p>
             </CardHeader>
             <CardContent>
@@ -159,65 +151,28 @@ export default function TableEquipos({ equipos, setEquipos }: TablaEquiposProps)
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-green-50">
-                                <TableHead className="text-green-800">Nombre</TableHead>
-                                <TableHead className="text-green-800">Unidad de medida</TableHead>
-                                <TableHead className="text-green-800">Valor</TableHead>
-                                <TableHead className="text-green-800">Tipo proveedor</TableHead>
-                                <TableHead className="text-green-800">Tipo material</TableHead>
+                                <TableHead className="text-green-800">Código</TableHead>
+                                <TableHead className="text-green-800">Actividad</TableHead>
+                                <TableHead className="text-green-800">Unidad</TableHead>
+                                <TableHead className="text-green-800">Precio Unitario</TableHead>
                                 <TableHead className="text-green-800 w-[100px]">Acciones</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {loadingEquipos ? (
+                            {loadingApus ? (
                                 <TableRow>
                                     <TableCell colSpan={6} className="text-center">
                                         <Loader2 className="h-8 w-8 animate-spin mx-auto text-green-600" />
                                     </TableCell>
                                 </TableRow>
-                            ) : equipos.length === 0 ? (
+                            ) : apus.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={5} className="text-center text-green-900">
-                                        No hay equipos registradas
+                                        No hay apus registradas
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                equipos.map((material) => (
-
-                                    <TableRow key={material.id} className="hover:bg-green-50/50">
-                                        <TableCell className="font-medium text-green-900">{material.nombre}</TableCell>
-                                        <TableCell className="text-green-900">{material.unidad_medida}</TableCell>
-                                        <TableCell className="text-green-900">
-                                            {Number(material.valor).toLocaleString('es-CO')}
-                                        </TableCell>
-                                        <TableCell className="text-green-900">{material.tipo_proveedor}</TableCell>
-                                        <TableCell className="text-green-900">{material.tipo_producto}</TableCell>
-                                        <TableCell className="text-green-900">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="center">
-                                                    <DropdownMenuItem
-                                                        onClick={() => setEquiposEditar(material)}
-                                                    >
-                                                        <Edit className="h-4 w-4 mr-2" />
-                                                        Editar
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem
-                                                        onClick={() => eliminarMaterial(material.id)}
-                                                        className="text-red-600"
-                                                    >
-                                                        <Trash2 className="h-4 w-4 mr-2"/>
-                                                        Eliminar
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
+                                'DATA HERE'
                             )}
                         </TableBody>
                     </Table>
@@ -225,7 +180,7 @@ export default function TableEquipos({ equipos, setEquipos }: TablaEquiposProps)
                     {totalRecords > 0 && (
                         <div className="flex items-center justify-between px-4 py-2 bg-green-50 border-t border-green-200">
                             <div className="text-sm text-green-700">
-                                Mostrando {start + 1} a {Math.min(start + length, totalRecords)} de {totalRecords} equipos
+                                Mostrando {start + 1} a {Math.min(start + length, totalRecords)} de {totalRecords} apus
                             </div>
                             <div className="flex items-center space-x-2">
                                 <Button 
@@ -276,13 +231,13 @@ export default function TableEquipos({ equipos, setEquipos }: TablaEquiposProps)
         </Card>
 
         <ConfirmDialog
-            open={materialAEliminar !== null}
-            onOpenChange={(open) => !open && setMaterialAEliminar(null)}
+            open={apuAEliminar !== null}
+            onOpenChange={(open) => !open && setAPUAEliminar(null)}
             onConfirm={confirmarEliminacion}
-            title="¿Estás seguro de eliminar este material?"
-            description="Esta acción no se puede deshacer. El material será eliminado permanentemente."
+            title="¿Estás seguro de eliminar este apu?"
+            description="Esta acción no se puede deshacer. El apu será eliminado permanentemente."
             confirmText="Eliminar"
-            loading={loadingMaterialHash === materialAEliminar?.toString()}
+            loading={loadingAPUHash === apuAEliminar?.toString()}
         />
 
     </>);
