@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import type React from "react";
-import { useState, useEffect } from "react";
+import apiClient from '@/app/api/apiClient';
+import { useEffect, useState } from 'react';
+import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Toaster } from "@/components/ui/toaster";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, BarChart3, HardHat, Package, Plus, Search, Trash2, Truck, Wrench } from "lucide-react";
-import apiClient from '@/app/api/apiClient';
+import { ArrowLeft, BarChart3, HardHat, Package, Plus, Search, Trash2, Truck, Wrench, Loader } from "lucide-react";
 
 // Constantes
 const activityTypes = [
@@ -88,16 +90,20 @@ const INSUMO_TYPE_MAP = {
 };
 
 export default function NewAPUPage() {
+
+    const { toast } = useToast();
     const [selectedInsumos, setSelectedInsumos] = useState<SelectedInsumo[]>([]);
     const [formData, setFormData] = useState({
         name: "",
         unit: "",
         unitPrice: 0,
-        activityType: "",
+        tipo_actividad: "",
         code: "",
         description: "",
     });
+    const [errors, setErrors] = useState<Record<string, string>>({});
     const [insumoType, setInsumoType] = useState("materials");
+    const [loadingSave, setLoadingSave] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [apiInsumos, setApiInsumos] = useState<any[]>([]);
@@ -177,10 +183,79 @@ export default function NewAPUPage() {
         setFormData((prev) => ({ ...prev, [field]: value }))
     }
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        console.log('guardando el formulario');
+        setLoadingSave(true); 
+
+        if (!validateForm()) {
+            setLoadingSave(false);
+            return;
+        };
+
+        if (selectedInsumos.length === 0) {
+            setLoadingSave(false);
+            toast({
+                variant: "destructive",
+                title: "Error APU",
+                description: "Debes agregar al menos un insumo al APU.",
+            });
+            return
+        }
+
+        try {
+            // const method = formData.id ? 'put' : 'post';
+            // const endpoint = '/productos';
+            // const action = formData.id ? 'actualizado' : 'creado';
+            const method = 'post';
+            const endpoint = '/apus';
+            const action = 'creado';
+            
+            const newAPU = {
+                ...formData,
+                insumos: selectedInsumos,
+            }
+
+            const response = await apiClient[method](endpoint, newAPU);
+            const responseData = response.data;
+            
+            if (responseData.success) {
+                toast({
+                    variant: "success",
+                    title: `Apus ${action}`,
+                    description: `El apu ha sido ${action} correctamente.`,
+                });
+
+                setFormData({
+                    name: "",
+                    unit: "",
+                    unitPrice: 0,
+                    tipo_actividad: "",
+                    code: "",
+                    description: "",
+                });
+                setSelectedInsumos([]);
+            }
+            
+        } catch (err) {
+            toast({
+                variant: "destructive",
+                title: "Error Equipos",
+                description: "Error al crear equipos.",
+            });
+        } finally {
+            setLoadingSave(false);
+        }
     }
+
+    const validateForm = () => {
+        const newErrors: Record<string, string> = {};
+        if (!formData.code) newErrors.nombre = "Requerido";
+        if (!formData.tipo_actividad) newErrors.unidad_medida = "Requerido";
+        if (!formData.name) newErrors.valor = "Requerido";
+        
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
 
     const formatPrice = (price: number): string => {
         return new Intl.NumberFormat("es-CL", {
@@ -214,27 +289,44 @@ export default function NewAPUPage() {
     );
 
     // Calcular total general
-    const totalGeneral = Object.values(categorySubtotals).reduce((sum, subtotal) => sum + subtotal, 0);
+    const totalGeneral = Object.values(categorySubtotals).reduce(
+        (sum, subtotal) => sum + (typeof subtotal === "number" && !isNaN(subtotal) ? subtotal : 0),
+        0
+    );
 
     const addInsumo = (insumo: any) => {
         const exists = selectedInsumos.some((item) => item.id === insumo.id && item.category === insumoType);
 
         if (exists) {
-        alert("Este insumo ya ha sido agregado")
-        return
+            alert("Este insumo ya ha sido agregado")
+            return
+        }
+
+        // Valores por defecto
+        const quantity = 1;
+        const unitPrice = insumo.unitPrice;
+        const wastePercentage = insumoType === "materials" ? 0 : undefined;
+        const performance = (insumoType === "labor" || insumoType === "equipment") ? 1 : undefined;
+
+        // Calcular total según tipo
+        let total = quantity * unitPrice;
+        if (insumoType === "materials") {
+            total = quantity * unitPrice * (1 + (wastePercentage || 0) / 100);
+        } else if (insumoType === "labor" || insumoType === "equipment") {
+            total = (quantity * unitPrice) / (performance || 1);
         }
 
         const newInsumo: SelectedInsumo = {
-        ...insumo,
-        quantity: 1,
-        total: insumo.unitPrice,
-        ...(insumoType === "materials" && { wastePercentage: 0 }),
-        ...((insumoType === "labor" || insumoType === "equipment") && { performance: 1 }),
-        supplierType: insumo.supplierType,
-        projectId: insumo.projectId
+            ...insumo,
+            quantity,
+            total,
+            ...(insumoType === "materials" && { wastePercentage }),
+            ...((insumoType === "labor" || insumoType === "equipment") && { performance }),
+            supplierType: insumo.supplierType,
+            projectId: insumo.projectId
         }
 
-        setSelectedInsumos([...selectedInsumos, newInsumo])
+        setSelectedInsumos(prev => [...prev, newInsumo]);
     }
 
     const updateInsumoField = (index: number, field: keyof SelectedInsumo, value: number) => {
@@ -362,8 +454,8 @@ export default function NewAPUPage() {
                                     Tipo de Actividad *
                                 </Label>
                                 <Select
-                                    value={formData.activityType}
-                                    onValueChange={(value) => handleInputChange("activityType", value)}
+                                    value={formData.tipo_actividad}
+                                    onValueChange={(value) => handleInputChange("tipo_actividad", value)}
                                     required
                                     >
                                     <SelectTrigger className="border-green-200 focus:border-green-400 focus:ring-green-400">
@@ -678,8 +770,31 @@ export default function NewAPUPage() {
                             </div>
                         )}
                     </div>
+
+                    <div className="flex justify-end gap-4 pt-4">
+                        <Link href="/budgets/apu">
+                            <Button variant="outline" className="border-green-300 text-green-700 hover:bg-green-50">
+                                Cancelar
+                            </Button>
+                        </Link>
+                        <Button
+                            type="submit"
+                            form="apu-form"
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                            disabled={loadingSave}
+                        >
+                            {loadingSave ? (
+                                <Loader className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <Plus className="h-4 w-4" />
+                            )}
+                            Crear APU
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
+
+            <Toaster />
         </div>
     );
 }

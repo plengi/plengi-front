@@ -13,7 +13,7 @@ import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGrou
 const AppSidebar = () => {
     const { open } = useSidebar();
     const pathname = usePathname();
-    const [empresa, setEmpresa] = useState('');
+    const [empresa, setEmpresa] = useState<any>(null);
 
     useEffect(() => {
         const empresaFromStorage = localStorage.getItem('empresaSeleccionada');
