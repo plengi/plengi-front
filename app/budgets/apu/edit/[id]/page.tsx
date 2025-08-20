@@ -1,5 +1,7 @@
+// En /apu/edit/[id]/page.tsx
 "use client"
 
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import type React from "react";
 import apiClient from '@/app/api/apiClient';
@@ -12,7 +14,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, BarChart3, HardHat, Package, Plus, Search, Trash2, Truck, Wrench, Loader } from "lucide-react";
+import { ArrowLeft, BarChart3, HardHat, Package, Plus, Save, Search, Trash2, Truck, Wrench, Loader } from "lucide-react";
 
 // Constantes
 const activityTypes = [
@@ -39,20 +41,21 @@ const units = [
     "Jornal"
 ];
 
+// Interfaces (las mismas que en new/page.tsx)
 interface SelectedInsumo {
-  id: number
-  name: string
-  unit: string
-  unitPrice: number
-  type: string
-  category: string
-  quantity: number
-  total: number
-  wastePercentage?: number
-  performance?: number
-  supplierType?: string
-  projectId?: number
-};
+    id: number;
+    name: string;
+    unit: string;
+    unitPrice: number;
+    type: string;
+    category: string;
+    quantity: number;
+    total: number;
+    wastePercentage?: number;
+    performance?: number;
+    supplierType?: string;
+    projectId?: number;
+}
 
 interface ApiProducto {
     id: number;
@@ -80,19 +83,25 @@ interface ApiResponse {
     message: string;
 }
 
-// Mapeo de tipos de insumo a tipo_producto
 const INSUMO_TYPE_MAP = {
-    materials: "0", // Materiales
-    equipment: "1", // Equipos
-    labor: "2",     // Mano de obra
-    transport: "3"  // Transporte
+    materials: "0",
+    equipment: "1",
+    labor: "2",
+    transport: "3"
 };
 
-export default function NewAPUPage() {
+export default function EditAPUPage() {
+
+    const params = useParams();
+    const router = useRouter();
 
     const { toast } = useToast();
+    const id = params.id as string;
+    const [totalGeneral, setTotalGeneral] = useState(0);
     const [selectedInsumos, setSelectedInsumos] = useState<SelectedInsumo[]>([]);
+    const [originalInsumos, setOriginalInsumos] = useState<SelectedInsumo[]>([]);
     const [formData, setFormData] = useState({
+        id: 0,
         name: "",
         unit: "",
         unitPrice: 0,
@@ -103,6 +112,7 @@ export default function NewAPUPage() {
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [insumoType, setInsumoType] = useState("materials");
     const [loadingSave, setLoadingSave] = useState(false);
+    const [loadingData, setLoadingData] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [apiInsumos, setApiInsumos] = useState<any[]>([]);
@@ -111,6 +121,73 @@ export default function NewAPUPage() {
         length: 10,
         draw: 1
     });
+
+    // Cargar datos del APU
+    useEffect(() => {
+        const fetchAPUData = async () => {
+            try {
+                setLoadingData(true);
+                const response = await apiClient.get(`/apu-find?id_apu=${id}`);
+                const apuData = response.data.data;
+                console.log('apuData: ', apuData);
+                
+                // Establecer datos del formulario
+                setFormData({
+                    id: apuData.id,
+                    name: apuData.nombre,
+                    unit: apuData.unidad_medida,
+                    unitPrice: apuData.valor_total,
+                    tipo_actividad: apuData.tipo_actividad,
+                    code: apuData.codigo,
+                    description: apuData.descripcion || "",
+                });
+
+                // Cargar insumos del APU
+                if (apuData.insumos && apuData.insumos.length > 0) {
+                    const mappedInsumos = apuData.insumos.map((insumo: any) => ({
+                        id: insumo.id,
+                        name: insumo.nombre,
+                        unit: insumo.unidad_medida,
+                        unitPrice: insumo.valor_unitario,
+                        type: insumo.tipo_insumo,
+                        category: getCategoryFromType(insumo.tipo_insumo),
+                        quantity: insumo.cantidad,
+                        total: insumo.valor_total,
+                        wastePercentage: insumo.porcentaje_desperdicio || 0,
+                        performance: insumo.rendimiento || 1,
+                        supplierType: insumo.tipo_proveedor,
+                        projectId: insumo.id_proyecto
+                    }));
+
+                    setSelectedInsumos(mappedInsumos);
+                    setOriginalInsumos(mappedInsumos);
+
+                    // Calcular total basado en los insumos
+                    const suma = mappedInsumos.reduce((sum: number, i: SelectedInsumo) => sum + i.total, 0);
+                    setTotalGeneral(suma);
+                    handleInputChange("unitPrice", suma); // También actualizar el formData
+                } else {
+                    // Si no hay insumos, usar el valor_total del APU
+                    const total = Number(apuData.valor_total) || 0;
+                    setTotalGeneral(total);
+                    handleInputChange("unitPrice", total);
+                }
+            } catch (error) {
+                console.error("Error al cargar datos del APU:", error);
+                toast({
+                    variant: "destructive",
+                    title: "Error",
+                    description: "No se pudieron cargar los datos del APU.",
+                });
+            } finally {
+                setLoadingData(false);
+            }
+        };
+        
+        if (id) {
+            fetchAPUData();
+        }
+    }, [id, toast]);
 
     // Función para cargar insumos desde la API
     const fetchInsumos = async () => {
@@ -178,12 +255,20 @@ export default function NewAPUPage() {
         }
     }, [pagination.start, pagination.draw]);
 
+    // Función auxiliar para mapear tipo de insumo a categoría
+    const getCategoryFromType = (type: string): string => {
+        for (const [key, value] of Object.entries(INSUMO_TYPE_MAP)) {
+            if (value === type) return key;
+        }
+        return "materials";
+    };
+
     const handleInputChange = (field: string, value: string | number) => {
         setFormData((prev) => ({ ...prev, [field]: value }))
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
+        e.preventDefault();
         setLoadingSave(true); 
 
         if (!validateForm()) {
@@ -198,53 +283,42 @@ export default function NewAPUPage() {
                 title: "Error APU",
                 description: "Debes agregar al menos un insumo al APU.",
             });
-            return
+            return;
         }
 
         try {
-            // const method = formData.id ? 'put' : 'post';
-            // const endpoint = '/productos';
-            // const action = formData.id ? 'actualizado' : 'creado';
-            const method = 'post';
-            const endpoint = '/apus';
-            const action = 'creado';
+            const endpoint = `/apus`;
             
-            const newAPU = {
+            const updatedAPU = {
                 ...formData,
+                id: Number(id),
                 insumos: selectedInsumos,
-            }
+            };
 
-            const response = await apiClient[method](endpoint, newAPU);
+            const response = await apiClient.put(endpoint, updatedAPU);
             const responseData = response.data;
             
             if (responseData.success) {
                 toast({
                     variant: "success",
-                    title: `Apus ${action}`,
-                    description: `El apu ha sido ${action} correctamente.`,
+                    title: `APU actualizado`,
+                    description: `El APU ha sido actualizado correctamente.`,
                 });
 
-                setFormData({
-                    name: "",
-                    unit: "",
-                    unitPrice: 0,
-                    tipo_actividad: "",
-                    code: "",
-                    description: "",
-                });
-                setSelectedInsumos([]);
+                // Redirigir a la lista de APUs después de editar
+                router.push("/budgets/apu");
             }
-            
+        
         } catch (err) {
-            toast({
-                variant: "destructive",
-                title: "Error Equipos",
-                description: "Error al crear equipos.",
-            });
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Error al actualizar el APU.",
+        });
         } finally {
-            setLoadingSave(false);
+        setLoadingSave(false);
         }
-    }
+    };
 
     const validateForm = () => {
         const newErrors: Record<string, string> = {};
@@ -287,12 +361,6 @@ export default function NewAPUPage() {
         {} as Record<string, number>,
     );
 
-    // Calcular total general
-    const totalGeneral = Object.values(categorySubtotals).reduce(
-        (sum, subtotal) => sum + (typeof subtotal === "number" && !isNaN(subtotal) ? subtotal : 0),
-        0
-    );
-
     const addInsumo = (insumo: any) => {
         const exists = selectedInsumos.some((item) => item.id === insumo.id && item.category === insumoType);
 
@@ -325,38 +393,52 @@ export default function NewAPUPage() {
             projectId: insumo.projectId
         }
 
-        setSelectedInsumos(prev => [...prev, newInsumo]);
+        setSelectedInsumos((prev) => {
+            const list = [...prev, newInsumo];
+            
+            // Recalcular total general
+            const sumTotal = list.reduce((sum, item) => sum + item.total, 0);
+            setTotalGeneral(sumTotal);
+            handleInputChange("unitPrice", sumTotal);
+
+            return list;
+        });
     }
 
     const updateInsumoField = (index: number, field: keyof SelectedInsumo, value: number) => {
-        const updatedInsumos = [...selectedInsumos]
-        const insumo = updatedInsumos[index]
+        const updatedInsumos = [...selectedInsumos];
+        const insumo = updatedInsumos[index];
 
-        ;(insumo as any)[field] = value
+        (insumo as any)[field] = value;
 
+        // Recalcular el total del insumo según su categoría
         if (insumo.category === "materials") {
-            const wasteMultiplier = 1 + (insumo.wastePercentage || 0) / 100
-            insumo.total = insumo.quantity * insumo.unitPrice * wasteMultiplier
+            const wasteMultiplier = 1 + (insumo.wastePercentage || 0) / 100;
+            insumo.total = insumo.quantity * insumo.unitPrice * wasteMultiplier;
         } else if (insumo.category === "labor" || insumo.category === "equipment") {
-            const performanceDivisor = insumo.performance || 1
-            insumo.total = (insumo.quantity * insumo.unitPrice) / performanceDivisor
+            const performanceDivisor = insumo.performance || 1;
+            insumo.total = (insumo.quantity * insumo.unitPrice) / performanceDivisor;
         } else {
-            insumo.total = insumo.quantity * insumo.unitPrice
+            insumo.total = insumo.quantity * insumo.unitPrice;
         }
 
-        setSelectedInsumos(updatedInsumos)
+        setSelectedInsumos(updatedInsumos);
 
-        const newTotal = updatedInsumos.reduce((sum, item) => sum + item.total, 0)
-        handleInputChange("unitPrice", newTotal)
-    }
+        // Recalcular el total general
+        const newTotal = updatedInsumos.reduce((sum, item) => sum + item.total, 0);
+        setTotalGeneral(newTotal);
+        handleInputChange("unitPrice", newTotal);
+    };
 
     const removeInsumo = (index: number) => {
-        const updatedInsumos = selectedInsumos.filter((_, i) => i !== index)
-        setSelectedInsumos(updatedInsumos)
+        const updatedInsumos = selectedInsumos.filter((_, i) => i !== index);
+        setSelectedInsumos(updatedInsumos);
 
-        const newTotal = updatedInsumos.reduce((sum, item) => sum + item.total, 0)
-        handleInputChange("unitPrice", newTotal)
-    }
+        // Recalcular el total general
+        const newTotal = updatedInsumos.reduce((sum, item) => sum + item.total, 0);
+        setTotalGeneral(newTotal);
+        handleInputChange("unitPrice", newTotal);
+    };
 
     const getCategoryLabel = (category: string) => {
         switch (category) {
@@ -398,9 +480,27 @@ export default function NewAPUPage() {
 
     const categoryOrder = ["equipment", "materials", "transport", "labor"]
 
+    if (loadingData) {
+        return (
+        <div className="container mx-auto py-8 space-y-6">
+            <div className="flex items-center gap-2">
+            <Link href="/budgets/apu">
+                <Button variant="outline" size="icon" className="h-8 w-8 border-green-200">
+                <ArrowLeft className="h-4 w-4 text-green-600" />
+                </Button>
+            </Link>
+            <h1 className="text-3xl font-bold tracking-tight text-green-900">Cargando APU...</h1>
+            </div>
+            <div className="flex justify-center items-center h-64">
+            <Loader className="h-8 w-8 animate-spin text-green-600" />
+            </div>
+        </div>
+        );
+    }
+
+    // El JSX es casi idéntico al de new/page.tsx, solo cambia algunos textos
     return (
         <div className="container mx-auto py-8 space-y-6">
-
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <Link href="/budgets/apu">
@@ -408,15 +508,15 @@ export default function NewAPUPage() {
                         <ArrowLeft className="h-4 w-4 text-green-600" />
                         </Button>
                     </Link>
-                    <h1 className="text-3xl font-bold tracking-tight text-green-900">Crear Nuevo APU</h1>
+                    <h1 className="text-3xl font-bold tracking-tight text-green-900">Editar APU</h1>
                 </div>
                 <Button
                     type="submit"
                     form="apu-form"
                     className="gap-2 bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-200"
                 >
-                <Plus className="h-4 w-4" />
-                    Guardar APU
+                    <Save className="h-4 w-4" />
+                    Actualizar APU
                 </Button>
             </div>
 
@@ -787,7 +887,7 @@ export default function NewAPUPage() {
                             ) : (
                                 <Plus className="h-4 w-4" />
                             )}
-                            Crear APU
+                            Actualizar APU
                         </Button>
                     </div>
                 </CardContent>

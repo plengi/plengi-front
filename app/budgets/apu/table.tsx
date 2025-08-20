@@ -1,5 +1,6 @@
 'use client';
 
+import Link from "next/link";
 import type React from "react";
 import apiClient from '@/app/api/apiClient';
 import { useEffect, useState } from 'react';
@@ -252,7 +253,9 @@ export default function TableApus({ apus, setApus }: TablaApusProps) {
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuItem>
                                                         <Edit className="h-4 w-4 mr-2" />
-                                                        Editar
+                                                        <Link href={`/budgets/apu/edit/${apu.id}`}>
+                                                            Editar
+                                                        </Link>
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem className="text-red-600">
