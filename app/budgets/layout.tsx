@@ -1,16 +1,17 @@
-export const metadata = {
-    title: 'PLENGI',
-    description: 'Generated Abdel Cartagena',
-}
+'use client';
 
-export default function RootLayout({
-        children,
-    }: {
-        children: React.ReactNode
-    }) {
+import type React from "react"
+import AppSidebar from '@/components/AppSidebar';
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+
+export default function BudgetsLayout({ children }: { children: React.ReactNode }) {
+
     return (
-        <html lang="en">
-            <body>{children}</body>
-        </html>
-    )
+        <SidebarProvider>
+            <AppSidebar />
+            <SidebarInset>
+                {children}
+            </SidebarInset>
+        </SidebarProvider>
+    );
 }

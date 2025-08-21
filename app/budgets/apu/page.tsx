@@ -17,6 +17,7 @@ interface Apus {
     descripcion: string;
     unidad_medida: number;
     valor_total: number;
+    tipo_actividad: string;
 }
 
 export default function ApusPage() {

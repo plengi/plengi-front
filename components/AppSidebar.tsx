@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Wrench, Truck, HardHat, Package, ChevronDown, User, Building2, Home, UserCog, LayoutDashboard, FolderKanban, BarChart3, PieChart } from "lucide-react";
+import { Wrench, Truck, HardHat, Package, ChevronDown, User, Building2, Home, UserCog, LayoutDashboard, FolderKanban, BarChart3, Calculator } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarFooter, useSidebar } from "@/components/ui/sidebar";
 
@@ -35,6 +35,11 @@ const AppSidebar = () => {
             title: "Proyectos",
             url: "/projects",
             icon: FolderKanban,
+        });
+        menuItems.push({
+            title: "Presupuestos",
+            url: "/budgets",
+            icon: Calculator,
         });
         menuItems.push({
             title: "Dashboard",
