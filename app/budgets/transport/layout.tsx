@@ -7,8 +7,8 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 export default function TransportesLayout({ children }: { children: React.ReactNode }) {
 
     return (
-        <html lang="en">
-            <body>{children}</body>
-        </html>
+        <div className="equipos-layout">
+            {children}
+        </div>
     );
 }

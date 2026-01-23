@@ -47,7 +47,7 @@ export default function PresupuestoPage() {
                     />
                 </div>
 
-                <Link href="">
+                <Link href="/budgets/new">
                     <Button className="gap-2 bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-200">
                     <Plus className="h-4 w-4" />
                         Nuevo Presupuesto

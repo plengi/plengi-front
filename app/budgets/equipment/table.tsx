@@ -42,7 +42,7 @@ export default function TableEquipos({ equipos, setEquipos }: TablaEquiposProps)
         const fetchEquipos = async () => {  
             setLoadingEquipos(true);
             try {
-                const response = await apiClient.get(`/productos?tipo_producto=3&start=${start}&length=${length}`);
+                const response = await apiClient.get(`/productos?tipo_producto=1&start=${start}&length=${length}`);
                 setEquipos(response.data.data);
                 setTotalRecords(response.data.iTotalRecords);
                 setPromedioEquipos(response.data.valor_promedio);

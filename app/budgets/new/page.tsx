@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -22,6 +21,7 @@ import {
   ChevronDown,
   GripVertical,
   MoveVertical,
+  Loader,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -43,7 +43,8 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { QuantityJustificationDialog } from "@/components/quantity-justification-dialog"
+import { useToast } from "@/hooks/use-toast"
+import apiClient from "@/app/api/apiClient"
 
 // Función para formatear precios
 const formatPrice = (price: number): string => {
@@ -55,65 +56,7 @@ const formatPrice = (price: number): string => {
   }).format(price)
 }
 
-// Función para cargar APUs desde localStorage
-const loadAPUsFromStorage = () => {
-  try {
-    const customAPUs = JSON.parse(localStorage.getItem("customAPUs") || "[]")
-    const defaultAPUs = [
-      {
-        id: 1,
-        name: "Excavación Manual en Tierra",
-        unit: "m³",
-        unitPrice: 15500,
-        activityType: "Movimiento de Tierras",
-        code: "APU-001",
-        description: "Excavación manual en tierra común hasta 2m de profundidad",
-      },
-      {
-        id: 2,
-        name: "Hormigón H20 en Fundaciones",
-        unit: "m³",
-        unitPrice: 125000,
-        activityType: "Hormigón Armado",
-        code: "APU-002",
-        description: "Suministro y colocación de hormigón H20 en fundaciones",
-      },
-      {
-        id: 3,
-        name: "Muro de Albañilería Ladrillo Fiscal",
-        unit: "m²",
-        unitPrice: 18500,
-        activityType: "Albañilería",
-        code: "APU-003",
-        description: "Construcción de muro de albañilería con ladrillo fiscal e=14cm",
-      },
-      {
-        id: 4,
-        name: "Instalación Eléctrica Embutida",
-        unit: "m",
-        unitPrice: 3200,
-        activityType: "Instalaciones Eléctricas",
-        code: "APU-004",
-        description: "Instalación eléctrica embutida en muro, incluye ducto y cable",
-      },
-      {
-        id: 5,
-        name: "Cubierta Teja Asfáltica",
-        unit: "m²",
-        unitPrice: 22000,
-        activityType: "Techumbres",
-        code: "APU-005",
-        description: "Instalación de cubierta con teja asfáltica incluye estructura",
-      },
-    ]
-    return [...defaultAPUs, ...customAPUs]
-  } catch (error) {
-    console.error("Error loading APUs from storage:", error)
-    return []
-  }
-}
-
-// Tipos de datos
+// Tipos de datos basados en tu backend
 interface BudgetAPU {
   id: string
   apuId: number
@@ -126,6 +69,7 @@ interface BudgetAPU {
   sectionId: string
   activityType: string
   order: number
+  description?: string
 }
 
 interface BudgetSection {
@@ -153,6 +97,18 @@ interface BudgetData {
   directTotal: number
   indirectTotal: number
   grandTotal: number
+}
+
+// Tipo para la respuesta de la API de APUs
+interface ApiApu {
+  id: number
+  codigo: string
+  nombre: string
+  descripcion?: string
+  tipo_actividad: string
+  unidad_medida: string
+  valor_total: number
+  detalles?: any[]
 }
 
 // Componente para agregar nueva sección
@@ -346,7 +302,8 @@ function EditSectionDialog({
 
 export default function NewBudgetPage() {
   const router = useRouter()
-  const [availableAPUs, setAvailableAPUs] = useState<any[]>([])
+  const { toast } = useToast()
+  const [availableAPUs, setAvailableAPUs] = useState<ApiApu[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedSection, setSelectedSection] = useState<string>("preliminares")
   const [draggedAPU, setDraggedAPU] = useState<string | null>(null)
@@ -354,14 +311,15 @@ export default function NewBudgetPage() {
   const [showSectionAlert, setShowSectionAlert] = useState(false)
   const [showAPUAlert, setShowAPUAlert] = useState(false)
   const [alertMessage, setAlertMessage] = useState("")
-
-  // New state for justification dialog
-  const [showJustificationDialog, setShowJustificationDialog] = useState(false)
-  const [currentApuForJustification, setCurrentApuForJustification] = useState<{
-    id: string
-    name: string
-    quantity: number
-  } | null>(null)
+  const [loading, setLoading] = useState({
+    apus: false,
+    save: false,
+  })
+  const [pagination, setPagination] = useState({
+    start: 0,
+    length: 10,
+    draw: 1,
+  })
 
   // Estado del presupuesto
   const [budgetData, setBudgetData] = useState<BudgetData>({
@@ -403,9 +361,64 @@ export default function NewBudgetPage() {
     grandTotal: 0,
   })
 
-  // Cargar APUs disponibles
+  // Cargar APUs disponibles desde la API
+  const fetchAPUs = async () => {
+    setLoading({ ...loading, apus: true })
+    try {
+      const response = await apiClient.get("/apus", {
+        params: {
+          search: searchTerm,
+          start: pagination.start,
+          length: pagination.length,
+          draw: pagination.draw,
+        },
+      })
+
+      if (response.data.success) {
+        const mappedAPUs = response.data.data.map((apu: any) => ({
+          id: apu.id,
+          codigo: apu.codigo,
+          nombre: apu.nombre,
+          descripcion: apu.descripcion,
+          tipo_actividad: apu.tipo_actividad,
+          unidad_medida: apu.unidad_medida,
+          valor_total: parseFloat(apu.valor_total),
+        }))
+
+        if (pagination.start > 0) {
+          setAvailableAPUs((prev) => [...prev, ...mappedAPUs])
+        } else {
+          setAvailableAPUs(mappedAPUs)
+        }
+      }
+    } catch (error) {
+      console.error("Error al cargar APUs:", error)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudieron cargar los APUs",
+      })
+    } finally {
+      setLoading({ ...loading, apus: false })
+    }
+  }
+
+  // Efecto para buscar APUs cuando cambia el término de búsqueda
   useEffect(() => {
-    setAvailableAPUs(loadAPUsFromStorage())
+    const timer = setTimeout(() => {
+      if (searchTerm !== "" || pagination.start > 0) {
+        fetchAPUs()
+      }
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [searchTerm, pagination.start, pagination.draw])
+
+  // Efecto para cargar APUs iniciales
+  useEffect(() => {
+    if (availableAPUs.length === 0) {
+      fetchAPUs()
+    }
   }, [])
 
   // Recalcular totales cuando cambian los APUs o costos indirectos
@@ -430,14 +443,12 @@ export default function NewBudgetPage() {
   }, [budgetData.apus, budgetData.indirectCosts.map((c) => c.percentage).join(",")])
 
   // Filtrar APUs disponibles
-  const filteredAPUs = availableAPUs
-    .filter(
-      (apu) =>
-        apu.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        apu.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        apu.activityType.toLowerCase().includes(searchTerm.toLowerCase()),
-    )
-    .slice(0, 8)
+  const filteredAPUs = availableAPUs.filter(
+    (apu) =>
+      apu.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      apu.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      apu.tipo_actividad.toLowerCase().includes(searchTerm.toLowerCase()),
+  )
 
   // Mostrar alerta temporal
   const showAlert = (message: string, type: "section" | "apu") => {
@@ -452,7 +463,7 @@ export default function NewBudgetPage() {
   }
 
   // Agregar APU al presupuesto
-  const addAPUToBudget = (apu: any) => {
+  const addAPUToBudget = (apu: ApiApu) => {
     if (!selectedSection) {
       alert("Selecciona una sección antes de agregar el APU")
       return
@@ -463,15 +474,16 @@ export default function NewBudgetPage() {
     const budgetAPU: BudgetAPU = {
       id: `budget-apu-${Date.now()}-${apu.id}`,
       apuId: apu.id,
-      name: apu.name,
-      code: apu.code,
-      unit: apu.unit,
-      unitPrice: apu.unitPrice,
+      name: apu.nombre,
+      code: apu.codigo,
+      unit: apu.unidad_medida,
+      unitPrice: apu.valor_total,
       quantity: 1,
-      total: apu.unitPrice,
+      total: apu.valor_total,
       sectionId: selectedSection,
-      activityType: apu.activityType,
+      activityType: apu.tipo_actividad,
       order: maxOrder + 1,
+      description: apu.descripcion,
     }
 
     setBudgetData((prev) => ({
@@ -480,14 +492,16 @@ export default function NewBudgetPage() {
     }))
 
     const sectionName = budgetData.sections.find((s) => s.id === selectedSection)?.name || "la sección"
-    showAlert(`APU "${apu.name}" agregado a ${sectionName}`, "apu")
+    showAlert(`APU "${apu.nombre}" agregado a ${sectionName}`, "apu")
   }
 
   // Actualizar cantidad de APU
   const updateAPUQuantity = (apuId: string, quantity: number) => {
     setBudgetData((prev) => ({
       ...prev,
-      apus: prev.apus.map((apu) => (apu.id === apuId ? { ...apu, quantity, total: quantity * apu.unitPrice } : apu)),
+      apus: prev.apus.map((apu) =>
+        apu.id === apuId ? { ...apu, quantity, total: quantity * apu.unitPrice } : apu,
+      ),
     }))
   }
 
@@ -497,26 +511,6 @@ export default function NewBudgetPage() {
       ...prev,
       apus: prev.apus.filter((apu) => apu.id !== apuId),
     }))
-  }
-
-  // New function to handle saving justification from the dialog
-  const handleSaveJustification = (
-    newQuantity: number,
-    justification: { text: string; imageUrl: string | null; calculation: any },
-  ) => {
-    if (currentApuForJustification) {
-      updateAPUQuantity(currentApuForJustification.id, newQuantity)
-      console.log(
-        `Justification for APU "${currentApuForJustification.name}" (ID: ${currentApuForJustification.id}):`,
-        {
-          newQuantity,
-          justification,
-        },
-      )
-      showAlert(`Cantidad de "${currentApuForJustification.name}" actualizada y justificada.`, "apu")
-    }
-    setShowJustificationDialog(false)
-    setCurrentApuForJustification(null)
   }
 
   // Agregar nueva sección
@@ -607,7 +601,6 @@ export default function NewBudgetPage() {
   const handleDragStart = (e: React.DragEvent, apuId: string) => {
     setDraggedAPU(apuId)
     e.dataTransfer.effectAllowed = "move"
-    // Necesario para Firefox
     e.dataTransfer.setData("text/plain", apuId)
   }
 
@@ -622,17 +615,14 @@ export default function NewBudgetPage() {
     e.preventDefault()
 
     if (draggedAPU && targetSectionId) {
-      // Obtener el APU arrastrado
       const apu = budgetData.apus.find((a) => a.id === draggedAPU)
 
       if (apu && apu.sectionId !== targetSectionId) {
-        // Calcular el nuevo orden (al final de la sección destino)
         const maxOrder = Math.max(
           ...budgetData.apus.filter((a) => a.sectionId === targetSectionId).map((a) => a.order),
           0,
         )
 
-        // Actualizar la sección del APU
         setBudgetData((prev) => ({
           ...prev,
           apus: prev.apus.map((a) =>
@@ -640,7 +630,6 @@ export default function NewBudgetPage() {
           ),
         }))
 
-        // Mostrar alerta
         const sourceSectionName = budgetData.sections.find((s) => s.id === apu.sectionId)?.name || "sección anterior"
         const targetSectionName = budgetData.sections.find((s) => s.id === targetSectionId)?.name || "nueva sección"
         showAlert(`APU "${apu.name}" movido de ${sourceSectionName} a ${targetSectionName}`, "apu")
@@ -662,19 +651,16 @@ export default function NewBudgetPage() {
     const apu = budgetData.apus.find((a) => a.id === apuId)
 
     if (apu && apu.sectionId !== targetSectionId) {
-      // Calcular el nuevo orden (al final de la sección destino)
       const maxOrder = Math.max(
         ...budgetData.apus.filter((a) => a.sectionId === targetSectionId).map((a) => a.order),
         0,
       )
 
-      // Actualizar la sección del APU
       setBudgetData((prev) => ({
         ...prev,
         apus: prev.apus.map((a) => (a.id === apuId ? { ...a, sectionId: targetSectionId, order: maxOrder + 1 } : a)),
       }))
 
-      // Mostrar alerta
       const sourceSectionName = budgetData.sections.find((s) => s.id === apu.sectionId)?.name || "sección anterior"
       const targetSectionName = budgetData.sections.find((s) => s.id === targetSectionId)?.name || "nueva sección"
       showAlert(`APU "${apu.name}" movido de ${sourceSectionName} a ${targetSectionName}`, "apu")
@@ -697,36 +683,85 @@ export default function NewBudgetPage() {
   })
 
   // Guardar presupuesto
-  const handleSaveBudget = () => {
-    if (!budgetData.name.trim()) {
-      alert("El nombre del presupuesto es obligatorio")
-      return
-    }
-
-    if (budgetData.apus.length === 0) {
-      alert("Debes agregar al menos un APU al presupuesto")
-      return
-    }
-
-    try {
-      const existingBudgets = JSON.parse(localStorage.getItem("customBudgets") || "[]")
-      const newBudget = {
-        ...budgetData,
-        id: Date.now(),
-        createdAt: new Date().toISOString(),
-        status: "Pendiente",
-        category: "Presupuesto General",
+  const handleSaveBudget = async () => {
+      if (!budgetData.name.trim()) {
+          toast({
+              variant: "destructive",
+              title: "Error",
+              description: "El nombre del presupuesto es obligatorio",
+          })
+          return
       }
 
-      existingBudgets.push(newBudget)
-      localStorage.setItem("customBudgets", JSON.stringify(existingBudgets))
+      if (budgetData.apus.length === 0) {
+          toast({
+              variant: "destructive",
+              title: "Error",
+              description: "Debes agregar al menos un APU al presupuesto",
+          })
+          return
+      }
 
-      alert("Presupuesto guardado exitosamente")
-      router.push("/budgets")
-    } catch (error) {
-      console.error("Error saving budget:", error)
-      alert("Error al guardar el presupuesto")
-    }
+      setLoading({ ...loading, save: true })
+
+      try {
+          // Preparar datos para enviar al backend
+          const budgetToSave = {
+              nombre: budgetData.name,
+              descripcion: budgetData.description,
+              proyecto: budgetData.project,
+              cliente: budgetData.client,
+              secciones: budgetData.sections.map(section => ({
+                  nombre: section.name,
+                  descripcion: section.description || "",
+                  orden: section.order,
+              })),
+              apus: budgetData.apus.map(apu => ({
+                  apuId: apu.apuId,
+                  sectionId: apu.sectionId,
+                  cantidad: apu.quantity,
+                  orden: apu.order,
+              })),
+              costo_directo_total: budgetData.directTotal,
+              costo_indirecto_administracion: budgetData.indirectCosts.find(c => c.name === "Administración")?.amount || 0,
+              costo_indirecto_imprevistos: budgetData.indirectCosts.find(c => c.name === "Imprevistos")?.amount || 0,
+              costo_indirecto_utilidad: budgetData.indirectCosts.find(c => c.name === "Utilidad")?.amount || 0,
+              presupuesto_total: budgetData.grandTotal,
+          }
+
+          // Llamar a la API para guardar el presupuesto
+          const response = await apiClient.post('/budgets', budgetToSave)
+          
+          if (response.data.success) {
+              toast({
+                  variant: "success",
+                  title: "Presupuesto guardado",
+                  description: response.data.message || "El presupuesto se ha guardado correctamente",
+              })
+
+              // Redirigir a la lista de presupuestos
+              router.push("/budgets")
+          } else {
+              throw new Error(response.data.message || "Error al guardar el presupuesto")
+          }
+      } catch (error: any) {
+          console.error("Error al guardar el presupuesto:", error)
+          toast({
+              variant: "destructive",
+              title: "Error",
+              description: error.message || "No se pudo guardar el presupuesto",
+          })
+      } finally {
+          setLoading({ ...loading, save: false })
+      }
+  }
+
+  const loadMoreResults = () => {
+    setPagination((prev) => ({
+      start: prev.start + prev.length,
+      length: prev.length,
+      draw: prev.draw + 1,
+    }))
   }
 
   return (
@@ -743,9 +778,14 @@ export default function NewBudgetPage() {
         </div>
         <Button
           onClick={handleSaveBudget}
+          disabled={loading.save}
           className="gap-2 bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-200"
         >
-          <Plus className="h-4 w-4" />
+          {loading.save ? (
+            <Loader className="h-4 w-4 animate-spin" />
+          ) : (
+            <Plus className="h-4 w-4" />
+          )}
           Guardar Presupuesto
         </Button>
       </div>
@@ -882,7 +922,12 @@ export default function NewBudgetPage() {
           </div>
 
           {/* Resultados de búsqueda */}
-          {searchTerm && filteredAPUs.length > 0 && (
+          {loading.apus ? (
+            <div className="text-center py-6 text-green-600 bg-green-50/50 rounded-lg border border-green-100">
+              <Loader className="h-8 w-8 animate-spin mx-auto mb-2" />
+              Buscando APUs...
+            </div>
+          ) : searchTerm && filteredAPUs.length > 0 ? (
             <div className="border border-green-100 rounded-lg overflow-hidden">
               <Table>
                 <TableHeader>
@@ -898,13 +943,13 @@ export default function NewBudgetPage() {
                 <TableBody>
                   {filteredAPUs.map((apu) => (
                     <TableRow key={apu.id} className="hover:bg-green-50/50">
-                      <TableCell className="font-medium text-green-900">{apu.code}</TableCell>
-                      <TableCell className="font-medium text-green-900">{apu.name}</TableCell>
-                      <TableCell>{apu.unit}</TableCell>
-                      <TableCell>{formatPrice(apu.unitPrice)}</TableCell>
+                      <TableCell className="font-medium text-green-900">{apu.codigo}</TableCell>
+                      <TableCell className="font-medium text-green-900">{apu.nombre}</TableCell>
+                      <TableCell>{apu.unidad_medida}</TableCell>
+                      <TableCell>{formatPrice(apu.valor_total)}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-xs">
-                          {apu.activityType}
+                          {apu.tipo_actividad}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -923,14 +968,22 @@ export default function NewBudgetPage() {
                   ))}
                 </TableBody>
               </Table>
+              <div className="p-2 border-t border-green-200 bg-green-50 text-center">
+                <Button
+                  variant="ghost"
+                  onClick={loadMoreResults}
+                  disabled={loading.apus}
+                  className="text-green-600 hover:bg-green-100"
+                >
+                  {loading.apus ? "Cargando..." : "Cargar más resultados"}
+                </Button>
+              </div>
             </div>
-          )}
-
-          {searchTerm && filteredAPUs.length === 0 && (
+          ) : searchTerm && !loading.apus && filteredAPUs.length === 0 ? (
             <div className="text-center py-3 text-green-600 bg-green-50/50 rounded-lg border border-green-100">
               No se encontraron APUs que coincidan con la búsqueda
             </div>
-          )}
+          ) : null}
         </CardContent>
       </Card>
 
@@ -1019,33 +1072,14 @@ export default function NewBudgetPage() {
                               <TableCell>{apu.unit}</TableCell>
                               <TableCell>{formatPrice(apu.unitPrice)}</TableCell>
                               <TableCell>
-                                <div className="flex items-center gap-1">
-                                  <Input
-                                    type="number"
-                                    min="0.01"
-                                    step="0.01"
-                                    value={apu.quantity}
-                                    onChange={(e) => updateAPUQuantity(apu.id, Number.parseFloat(e.target.value) || 0)}
-                                    className="w-20 h-8 text-sm border-green-200"
-                                  />
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      setCurrentApuForJustification({
-                                        id: apu.id,
-                                        name: apu.name,
-                                        quantity: apu.quantity,
-                                      })
-                                      setShowJustificationDialog(true)
-                                    }}
-                                    className="h-8 w-8 p-0"
-                                    title="Justificar Cantidad"
-                                  >
-                                    <Calculator className="h-4 w-4 text-green-600" />
-                                  </Button>
-                                </div>
+                                <Input
+                                  type="number"
+                                  min="0.01"
+                                  step="0.01"
+                                  value={apu.quantity}
+                                  onChange={(e) => updateAPUQuantity(apu.id, Number.parseFloat(e.target.value) || 0)}
+                                  className="w-20 h-8 text-sm border-green-200"
+                                />
                               </TableCell>
                               <TableCell className="font-medium">{formatPrice(apu.total)}</TableCell>
                               <TableCell>
@@ -1215,21 +1249,21 @@ export default function NewBudgetPage() {
             Cancelar
           </Button>
         </Link>
-        <Button onClick={handleSaveBudget} className="bg-green-600 hover:bg-green-700 text-white">
-          Guardar Presupuesto
+        <Button
+          onClick={handleSaveBudget}
+          disabled={loading.save}
+          className="bg-green-600 hover:bg-green-700 text-white"
+        >
+          {loading.save ? (
+            <>
+              <Loader className="h-4 w-4 animate-spin mr-2" />
+              Guardando...
+            </>
+          ) : (
+            "Guardar Presupuesto"
+          )}
         </Button>
       </div>
-
-      {/* Quantity Justification Dialog */}
-      {currentApuForJustification && (
-        <QuantityJustificationDialog
-          isOpen={showJustificationDialog}
-          onOpenChange={setShowJustificationDialog}
-          apuName={currentApuForJustification.name}
-          initialQuantity={currentApuForJustification.quantity}
-          onSave={handleSaveJustification}
-        />
-      )}
     </div>
   )
 }

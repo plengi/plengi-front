@@ -98,13 +98,13 @@ export default function CompanyForm({ setMateriales, materialesEditar, setMateri
                 unidad_medida: materialesEditar.unidad_medida,
                 valor: materialesEditar.valor,
                 tipo_proveedor: materialesEditar.tipo_proveedor,
-                tipo_producto: materialesEditar.tipo_producto
+                tipo_producto: 0
             });
             
             // Actualizar los estados de los selects
             setSelectedUnidadMedida(materialesEditar.unidad_medida);
             setSelectedProveedor(materialesEditar.tipo_proveedor);
-            setSelectedTipoProducto(materialesEditar.tipo_producto.toString()); // Asegúrate de convertirlo a string si es número
+            setSelectedTipoProducto('0'); // Asegúrate de convertirlo a string si es número
             
             setOpen(true);
         }
@@ -323,9 +323,9 @@ export default function CompanyForm({ setMateriales, materialesEditar, setMateri
                             <div className="flex gap-2">
                                 <Select
                                     value={selectedTipoProducto}
-                                    onValueChange={(value) => {
-                                        handleInputChange("tipo_producto", value);
-                                    }}
+                                    // onValueChange={(value) => {
+                                    //     handleInputChange("tipo_producto", value);
+                                    // }}
                                 >
                                     <SelectTrigger className="border-green-200 focus:border-green-400 focus:ring-green-400">
                                         <SelectValue placeholder="Seleccionar tipo de material" />
