@@ -32,6 +32,16 @@ const AppSidebar = () => {
 
     if (empresa) {
         menuItems.push({
+            title: "Dashboard",
+            url: "/dashboard",
+            icon: LayoutDashboard,
+        });
+        menuItems.push({
+            title: "Clientes",
+            url: "/clientes",
+            icon: User,
+        });
+        menuItems.push({
             title: "Proyectos",
             url: "/projects",
             icon: FolderKanban,
@@ -40,11 +50,6 @@ const AppSidebar = () => {
             title: "Presupuestos",
             url: "/budgets",
             icon: Calculator,
-        });
-        menuItems.push({
-            title: "Dashboard",
-            url: "/dashboard",
-            icon: LayoutDashboard,
         });
         menuItems.push({
             title: "Perfil",
