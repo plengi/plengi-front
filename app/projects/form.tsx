@@ -6,15 +6,13 @@ import { useEffect, useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { Combobox } from "@headlessui/react";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
 import { 
     Plus,
     Check,
-    Wrench,
     Loader,
     Building2,
     ChevronsUpDown
@@ -28,26 +26,33 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue
-} from "@/components/ui/select";
 
 export interface Proyecto {
     id: number;
     nombre: string;
-    tipo_obra: string;
-    id_ciudad: string;
-    fecha: string;
+    descripcion: string;
+    id_cliente: number;
+    cliente_nombre: string;
+    id_ubicacion: string;
+    ubicacion_nombre: string;
+    fecha_inicio: string;
+    estado: string;
+    valor_total: number;
+    budgets?: any[];
+    budgets_count: number;
 }
 
 interface Ciudad {
     id: number;
     nombre: string;
     nombre_completo: string;
+    text: string;
+}
+
+interface Cliente {
+    id: number;
+    nombres: string;
+    apellidos: string;
     text: string;
 }
 
@@ -58,6 +63,14 @@ interface FormProyectosProps {
     setProyectoEditar?: React.Dispatch<React.SetStateAction<Proyecto | null>>;
 }
 
+const estadosProyecto = [
+    { id: "planificacion", nombre: 'Planificación' },
+    { id: "en_progreso", nombre: 'En progreso' },
+    { id: "en_revision", nombre: 'En revisión' },
+    { id: "aprobado", nombre: 'Aprobado' },
+    { id: "completado", nombre: 'Completado' },
+];
+
 export default function ProjectsForm({ setProyectos, proyectoEditar, setProyectoEditar, mostrarBotonCrear }: FormProyectosProps) {
 
     const { toast } = useToast();
@@ -65,7 +78,7 @@ export default function ProjectsForm({ setProyectos, proyectoEditar, setProyecto
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
-    const [selectedTipoObra, setSelectedTipoObra] = useState<string>("");
+    const [selectedEstado, setSelectedEstado] = useState<string>("");
 
     // Estados para el combobox de ciudades
     const [ciudades, setCiudades] = useState<Ciudad[]>([]);
@@ -74,12 +87,21 @@ export default function ProjectsForm({ setProyectos, proyectoEditar, setProyecto
     const [loadingCiudades, setLoadingCiudades] = useState(false);
     const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
 
+    // Estados para el combobox de clientes
+    const [clientes, setClientes] = useState<Cliente[]>([]);
+    const [clienteQuery, setClienteQuery] = useState('');
+    const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
+    const [loadingClientes, setLoadingClientes] = useState(false);
+    const [debounceTimerClientes, setDebounceTimerClientes] = useState<NodeJS.Timeout | null>(null);
+
     const [formData, setFormData] = useState({
         id: 0,
         nombre: "",
-        tipo_obra: "",
-        id_ciudad: "",
-        fecha: new Date().toISOString().split('T')[0],
+        descripcion: "",
+        id_cliente: 0,
+        id_ubicacion: "",
+        fecha_inicio: new Date().toISOString().split('T')[0],
+        estado: "planificacion",
     });
 
     useEffect(() => {
@@ -87,44 +109,73 @@ export default function ProjectsForm({ setProyectos, proyectoEditar, setProyecto
             setFormData({
                 id: proyectoEditar.id,
                 nombre: proyectoEditar.nombre,
-                tipo_obra: proyectoEditar.tipo_obra,
-                id_ciudad: proyectoEditar.id_ciudad,
-                fecha: proyectoEditar.fecha
+                descripcion: proyectoEditar.descripcion || "",
+                id_cliente: proyectoEditar.id_cliente,
+                id_ubicacion: proyectoEditar.id_ubicacion,
+                fecha_inicio: proyectoEditar.fecha_inicio.split('T')[0],
+                estado: proyectoEditar.estado,
             });
 
+            setSelectedEstado(proyectoEditar.estado);
+            
             // Busca la ciudad en la lista ya cargada
-            if (ciudades.length > 0) {
-                const ciudadEditada = ciudades.find(c => c.id.toString() === proyectoEditar.id_ciudad);
+            if (ciudades.length > 0 && proyectoEditar.id_ubicacion) {
+                const ciudadEditada = ciudades.find(c => c.id.toString() === proyectoEditar.id_ubicacion);
                 if (ciudadEditada) {
                     setSelectedCiudad(ciudadEditada);
                 }
             }
             
+            // Busca el cliente en la lista ya cargada
+            if (clientes.length > 0 && proyectoEditar.id_cliente) {
+                const clienteEditado = clientes.find(c => c.id === proyectoEditar.id_cliente);
+                if (clienteEditado) {
+                    setSelectedCliente(clienteEditado);
+                }
+            }
+            
             setOpen(true);
         }
-    }, [proyectoEditar, ciudades]); // Añade ciudades como dependencia
+    }, [proyectoEditar, ciudades, clientes]);
 
-    // Efecto para cargar ciudades iniciales y cuando se edita
+    // Efecto para cargar ciudades y clientes cuando se abre el diálogo
     useEffect(() => {
         if (open) {
             fetchCiudades();
+            fetchClientes();
             
-            // Si estamos editando, buscar la ciudad correspondiente
+            // Si estamos editando y no encontramos los datos en las listas cargadas
             if (proyectoEditar) {
-                apiClient.get(`/ciudades/${proyectoEditar.id_ciudad}`)
-                .then(response => {
-                    if (response.data.success) {
-                        setSelectedCiudad(response.data.data);
-                    }
-                })
-                .catch(error => {
-                    console.error("Error fetching ciudad:", error);
-                });
+                // Ciudad
+                if (proyectoEditar.id_ubicacion && !ciudades.find(c => c.id.toString() === proyectoEditar.id_ubicacion)) {
+                    apiClient.get(`/ciudades/${proyectoEditar.id_ubicacion}`)
+                    .then(response => {
+                        if (response.data.success) {
+                            setSelectedCiudad(response.data.data);
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error fetching ciudad:", error);
+                    });
+                }
+
+                // Cliente
+                if (proyectoEditar.id_cliente && !clientes.find(c => c.id === proyectoEditar.id_cliente)) {
+                    apiClient.get(`/clientes/${proyectoEditar.id_cliente}`)
+                    .then(response => {
+                        if (response.data.success) {
+                            setSelectedCliente(response.data.data);
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error fetching cliente:", error);
+                    });
+                }
             }
         }
-    }, [open, proyectoEditar]);
+    }, [open]);
 
-    // Efecto para el debounce de búsqueda
+    // Efecto para el debounce de búsqueda de ciudades
     useEffect(() => {
         if (debounceTimer) {
             clearTimeout(debounceTimer);
@@ -143,13 +194,32 @@ export default function ProjectsForm({ setProyectos, proyectoEditar, setProyecto
         };
     }, [ciudadQuery]);
 
+    // Efecto para el debounce de búsqueda de clientes
+    useEffect(() => {
+        if (debounceTimerClientes) {
+            clearTimeout(debounceTimerClientes);
+        }
+        
+        const timer = setTimeout(() => {
+            fetchClientes(clienteQuery);
+        }, 500);
+        
+        setDebounceTimerClientes(timer);
+        
+        return () => {
+            if (debounceTimerClientes) {
+                clearTimeout(debounceTimerClientes);
+            }
+        };
+    }, [clienteQuery]);
+
     // Función para buscar ciudades con debounce
     const fetchCiudades = async (query: string = '') => {
         setLoadingCiudades(true);
         try {
             const response = await apiClient.get(`/ciudades-combo?search=${query}`);
             if (response.data) {
-                setCiudades(response.data.data); // Accede a data.data según tu respuesta
+                setCiudades(response.data.data);
             }
         } catch (error) {
             console.error("Error fetching ciudades:", error);
@@ -158,18 +228,39 @@ export default function ProjectsForm({ setProyectos, proyectoEditar, setProyecto
         }
     };
 
+    // Función para buscar clientes con debounce
+    const fetchClientes = async (query: string = '') => {
+        setLoadingClientes(true);
+        try {
+            const response = await apiClient.get(`/clientes-combo?search=${query}`);
+            if (response.data) {
+                setClientes(response.data.data);
+            }
+        } catch (error) {
+            console.error("Error fetching clientes:", error);
+        } finally {
+            setLoadingClientes(false);
+        }
+    };
+
     const handleOpenChange = (isOpen: boolean) => {
         setOpen(isOpen);
         if (!isOpen) {
-        // Resetear el formulario al cerrar
-        setFormData({
-            id: 0,
-            nombre: "",
-            tipo_obra: "",
-            id_ciudad: "",
-            fecha: "",
-        });
-        if (setProyectoEditar) setProyectoEditar(null);
+            setFormData({
+                id: 0,
+                nombre: "",
+                descripcion: "",
+                id_cliente: 0,
+                id_ubicacion: "",
+                fecha_inicio: new Date().toISOString().split('T')[0],
+                estado: "planificacion",
+            });
+            setSelectedEstado("planificacion");
+            setSelectedCiudad(null);
+            setSelectedCliente(null);
+            setCiudadQuery('');
+            setClienteQuery('');
+            if (setProyectoEditar) setProyectoEditar(null);
         }
     };
 
@@ -196,7 +287,15 @@ export default function ProjectsForm({ setProyectos, proyectoEditar, setProyecto
             const responseData = response.data;
 
             if (response.data.success) {
-                setProyectos(prev => [responseData.data, ...prev]);
+                if (formData.id) {
+                    // Actualizar el proyecto en la lista
+                    setProyectos(prev => prev.map(proyecto => 
+                        proyecto.id === formData.id ? responseData.data : proyecto
+                    ));
+                } else {
+                    // Agregar el nuevo proyecto a la lista
+                    setProyectos(prev => [responseData.data, ...prev]);
+                }
                 toast({
                     variant: "success",
                     title: `Proyecto ${action}`,
@@ -205,11 +304,11 @@ export default function ProjectsForm({ setProyectos, proyectoEditar, setProyecto
             }
 
             handleClose();
-        } catch (err) {
+        } catch (err: any) {
             toast({
                 variant: "destructive",
                 title: "Error Proyecto",
-                description: "Error al crear empresa.",
+                description: err.response?.data?.message || "Error al crear proyecto.",
             });
         } finally {
             setLoading(false);
@@ -219,9 +318,10 @@ export default function ProjectsForm({ setProyectos, proyectoEditar, setProyecto
     const validateForm = () => {
         const newErrors: Record<string, string> = {};
         if (!formData.nombre) newErrors.nombre = "Requerido";
-        if (!formData.tipo_obra) newErrors.tipo_obra = "Requerido";
-        if (!formData.id_ciudad) newErrors.id_ciudad = "Requerido";
-        if (!formData.fecha) newErrors.fecha = "Requerido";
+        if (!formData.id_cliente) newErrors.id_cliente = "Requerido";
+        if (!formData.id_ubicacion) newErrors.id_ubicacion = "Requerido";
+        if (!formData.fecha_inicio) newErrors.fecha_inicio = "Requerido";
+        if (!formData.estado) newErrors.estado = "Requerido";
         
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -232,12 +332,17 @@ export default function ProjectsForm({ setProyectos, proyectoEditar, setProyecto
         setFormData({
             id: 0,
             nombre: "",
-            tipo_obra: "",
-            id_ciudad: "",
-            fecha: "",
+            descripcion: "",
+            id_cliente: 0,
+            id_ubicacion: "",
+            fecha_inicio: new Date().toISOString().split('T')[0],
+            estado: "planificacion",
         });
+        setSelectedEstado("planificacion");
         setSelectedCiudad(null);
+        setSelectedCliente(null);
         setCiudadQuery('');
+        setClienteQuery('');
         if (setProyectoEditar) setProyectoEditar(null);
     };    
 
@@ -259,7 +364,7 @@ export default function ProjectsForm({ setProyectos, proyectoEditar, setProyecto
                 <DialogHeader>
                     <DialogTitle className="text-green-900 flex items-center gap-2 text-3xl">
                         <Building2 className="h-5 w-5 text-green-600" />
-                        {formData.id ? 'Editar Proyecto' : 'Crear Nueva Proyecto'}
+                        {formData.id ? 'Editar Proyecto' : 'Crear Nuevo Proyecto'}
                     </DialogTitle>
                     <DialogDescription className="text-green-600">
                         Completa la información del proyecto para {formData.id ? 'editarlo' : 'crearlo'}
@@ -274,7 +379,7 @@ export default function ProjectsForm({ setProyectos, proyectoEditar, setProyecto
                         <Input
                             id="nombre"
                             name="nombre"
-                            placeholder="Nombre Proyecto SAS"
+                            placeholder="Nombre del Proyecto"
                             value={formData.nombre}
                             onChange={(e) => handleInputChange("nombre", e.target.value)}
                             className="border-green-200 focus:border-green-400 focus:ring-green-400"
@@ -285,41 +390,116 @@ export default function ProjectsForm({ setProyectos, proyectoEditar, setProyecto
                         )}
                     </div>
 
+                    <div className="space-y-0">
+                        <Label htmlFor="descripcion" className="text-green-800">
+                            Descripción
+                        </Label>
+                        <Textarea
+                            id="descripcion"
+                            name="descripcion"
+                            placeholder="Descripción del proyecto..."
+                            value={formData.descripcion}
+                            onChange={(e) => handleInputChange("descripcion", e.target.value)}
+                            className="border-green-200 focus:border-green-400 focus:ring-green-400 min-h-[80px]"
+                        />
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-0">
-                            <Label htmlFor="section-select" className="text-green-800">
-                                Tipo de obra
+                            <Label htmlFor="cliente" className="text-green-800">
+                                Cliente <span className="text-red-500">*</span>
                             </Label>
-                            <div className="flex gap-2">
-                                <Select
-                                    value={selectedTipoObra}
-                                    onValueChange={(value) => {
-                                        setSelectedTipoObra(value);
-                                        handleInputChange("tipo_obra", value);
-                                    }}
-                                >
-                                    <SelectTrigger className="border-green-200 focus:border-green-400 focus:ring-green-400">
-                                        <SelectValue placeholder="Seleccionar sección" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem key={1} value={"1"}>A</SelectItem>
-                                        <SelectItem key={2} value={"2"}>B</SelectItem>
-                                        <SelectItem key={3} value={"3"}>C</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            {errors.tipo_obra && (
-                                <p className="text-red-500 text-sm">{errors.tipo_obra}</p>
+                            <Combobox value={selectedCliente} onChange={(cliente) => {
+                                setSelectedCliente(cliente);
+                                handleInputChange("id_cliente", cliente?.id.toString() || "0");
+                            }}>
+                                <div className="relative">
+                                    <Combobox.Input
+                                        className="flex h-10 w-full rounded-md border border-green-200 bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                        displayValue={(cliente: Cliente) => cliente ? `${cliente.nombres} ${cliente.apellidos}` : ''}
+                                        onChange={(event) => setClienteQuery(event.target.value)}
+                                        placeholder="Buscar cliente..."
+                                    />
+                                    <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-2">
+                                        <ChevronsUpDown className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                                    </Combobox.Button>
+                                </div>
+                                <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                                    {loadingClientes ? (
+                                        <div className="relative cursor-default select-none px-4 py-2 text-gray-700">
+                                            Cargando...
+                                        </div>
+                                    ) : clientes.length === 0 ? (
+                                        <div className="relative cursor-default select-none px-4 py-2 text-gray-700">
+                                            No se encontraron clientes
+                                        </div>
+                                    ) : (
+                                        clientes.map((cliente) => (
+                                            <Combobox.Option
+                                                key={cliente.id}
+                                                value={cliente}
+                                                className={({ active }) =>
+                                                    `relative cursor-default select-none py-2 pl-10 pr-4 ${
+                                                        active ? 'bg-green-100 text-green-900' : 'text-gray-900'
+                                                    }`
+                                                }
+                                            >
+                                                {({ selected, active }) => (
+                                                    <>
+                                                        <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                                                            {cliente.nombres} {cliente.apellidos}
+                                                        </span>
+                                                        {selected && (
+                                                            <span className={`absolute inset-y-0 left-0 flex items-center pl-3 text-green-600`}>
+                                                                <Check className="h-5 w-5" aria-hidden="true" />
+                                                            </span>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </Combobox.Option>
+                                        ))
+                                    )}
+                                </Combobox.Options>
+                            </Combobox>
+                            {errors.id_cliente && (
+                                <p className="text-red-500 text-sm">{errors.id_cliente}</p>
                             )}
                         </div>
 
                         <div className="space-y-0">
+                            <Label htmlFor="estado" className="text-green-800">
+                                Estado <span className="text-red-500">*</span>
+                            </Label>
+                            <select
+                                value={selectedEstado}
+                                onChange={(e) => {
+                                    setSelectedEstado(e.target.value);
+                                    handleInputChange("estado", e.target.value);
+                                }}
+                                className="flex h-10 w-full rounded-md border border-green-200 bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                required
+                            >
+                                <option value="">Seleccionar estado</option>
+                                {estadosProyecto.map((estado) => (
+                                    <option key={estado.id} value={estado.id}>
+                                        {estado.nombre}
+                                    </option>
+                                ))}
+                            </select>
+                            {errors.estado && (
+                                <p className="text-red-500 text-sm">{errors.estado}</p>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-0">
                             <Label htmlFor="ciudad" className="text-green-800">
-                                Ciudad <span className="text-red-500">*</span>
+                                Ubicación <span className="text-red-500">*</span>
                             </Label>
                             <Combobox value={selectedCiudad} onChange={(ciudad) => {
                                 setSelectedCiudad(ciudad);
-                                handleInputChange("id_ciudad", ciudad?.id.toString() || "");
+                                handleInputChange("id_ubicacion", ciudad?.id.toString() || "");
                             }}>
                                 <div className="relative">
                                     <Combobox.Input
@@ -369,31 +549,28 @@ export default function ProjectsForm({ setProyectos, proyectoEditar, setProyecto
                                     )}
                                 </Combobox.Options>
                             </Combobox>
-                            {errors.id_ciudad && (
-                                <p className="text-red-500 text-sm">{errors.id_ciudad}</p>
+                            {errors.id_ubicacion && (
+                                <p className="text-red-500 text-sm">{errors.id_ubicacion}</p>
                             )}
                         </div>
 
-
+                        <div className="space-y-0">
+                            <Label htmlFor="fecha_inicio" className="text-green-800">
+                                Fecha de inicio <span className="text-red-500">*</span>
+                            </Label>
+                            <Input
+                                type="date"
+                                id="fecha_inicio"
+                                value={formData.fecha_inicio}
+                                onChange={(e) => handleInputChange("fecha_inicio", e.target.value)}
+                                className="border-green-200 focus:border-green-400"
+                                required
+                            />
+                            {errors.fecha_inicio && (
+                                <p className="text-red-500 text-sm">{errors.fecha_inicio}</p>
+                            )}
+                        </div>
                     </div>
-
-                    <div className="space-y-0">
-                        <Label htmlFor="fecha" className="text-green-800">
-                            Fecha <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                            type="date"
-                            id="fecha"
-                            value={formData.fecha}
-                            onChange={(e) => handleInputChange("fecha", e.target.value)}
-                            className="border-green-200 focus:border-green-400"
-                            required
-                        />
-                        {errors.fecha && (
-                            <p className="text-red-500 text-sm">{errors.fecha}</p>
-                        )}
-                    </div>
-
 
                     <DialogFooter className="gap-2 pt-4">
                         <Button
