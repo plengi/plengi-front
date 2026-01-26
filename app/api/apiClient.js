@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-    baseURL: 'https://plengi.com/api/login', // Reemplaza con tu URL
+    baseURL: 'https://plengi.com/api', // Reemplaza con tu URL
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
