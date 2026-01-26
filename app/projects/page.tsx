@@ -67,6 +67,11 @@ export default function ProjectsPage() {
         }
     };
 
+    const handleBudgetAdded = async (proyectoId: number) => {
+        // Recargar la lista de proyectos
+        await fetchProyectos();
+    };
+
     const filteredProjects = proyectos.filter((project) => {
         const matchesSearch =
             project.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -181,7 +186,7 @@ export default function ProjectsPage() {
                             proyecto={project}
                             setProyectoEditar={setProyectoEditar}
                             onEliminar={handleEliminarProyecto}
-                            onAgregarBudget={handleAgregarBudget}
+                            onBudgetAdded={handleBudgetAdded} 
                         />
                     ))}
                 </div>

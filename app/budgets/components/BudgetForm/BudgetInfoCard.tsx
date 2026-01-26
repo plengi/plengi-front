@@ -40,30 +40,6 @@ export default function BudgetInfoCard({ budgetData, setBudgetData }: BudgetInfo
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="budget-project" className="text-green-800">
-                            Proyecto
-                        </Label>
-                        <Input
-                            id="budget-project"
-                            placeholder="Nombre del proyecto"
-                            value={budgetData.project}
-                            onChange={(e) => setBudgetData((prev) => ({ ...prev, project: e.target.value }))}
-                            className="border-green-200 focus:border-green-400 focus:ring-green-400"
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="budget-client" className="text-green-800">
-                            Cliente
-                        </Label>
-                        <Input
-                            id="budget-client"
-                            placeholder="Nombre del cliente"
-                            value={budgetData.client}
-                            onChange={(e) => setBudgetData((prev) => ({ ...prev, client: e.target.value }))}
-                            className="border-green-200 focus:border-green-400 focus:ring-green-400"
-                        />
-                    </div>
-                    <div className="space-y-2">
                         <Label htmlFor="budget-description" className="text-green-800">
                             Descripción
                         </Label>

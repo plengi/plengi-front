@@ -35,8 +35,6 @@ export default function NewBudgetPage() {
             const budgetToSave = {
                 nombre: budgetData.name,
                 descripcion: budgetData.description,
-                proyecto: budgetData.project,
-                cliente: budgetData.client,
                 secciones: seccionesConOrden,
                 apus: budgetData.apus.map(apu => ({
                     apuId: apu.apuId,

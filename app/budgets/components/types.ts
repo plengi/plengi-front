@@ -30,8 +30,6 @@ export interface IndirectCost {
 export interface BudgetData {
     name: string
     description: string
-    project: string
-    client: string
     sections: BudgetSection[]
     apus: BudgetAPU[]
     indirectCosts: IndirectCost[]

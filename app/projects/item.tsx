@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { useToast } from "@/hooks/use-toast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import apiClient from '@/app/api/apiClient';
+import AddBudgetModal from './components/AddBudgetModal';
 
 interface Proyecto {
     id: number;
@@ -36,13 +37,14 @@ interface ProjectsItemProps {
     proyecto: Proyecto;
     setProyectoEditar: (proyecto: Proyecto) => void;
     onEliminar: (id: number) => void;
-    onAgregarBudget: (proyectoId: number) => void;
+    onBudgetAdded: (proyectoId: number) => void; // Nueva prop para recargar proyectos
 }
 
-export default function ProjectsItem({ proyecto, setProyectoEditar, onEliminar, onAgregarBudget }: ProjectsItemProps) {
+export default function ProjectsItem({ proyecto, setProyectoEditar, onEliminar, onBudgetAdded }: ProjectsItemProps) {
     const { toast } = useToast();
     const [proyectoAEliminar, setProyectoAEliminar] = useState<number | null>(null);
     const [loadingEliminar, setLoadingEliminar] = useState(false);
+    const [addBudgetModalOpen, setAddBudgetModalOpen] = useState(false);
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -114,8 +116,10 @@ export default function ProjectsItem({ proyecto, setProyectoEditar, onEliminar, 
         setProyectoAEliminar(id);
     };
 
-    const handleAgregarBudget = () => {
-        onAgregarBudget(proyecto.id);
+    const handleBudgetAdded = () => {
+        // Cierra el modal y recarga los datos del proyecto
+        setAddBudgetModalOpen(false);
+        onBudgetAdded(proyecto.id);
     };
 
     return (
@@ -137,9 +141,6 @@ export default function ProjectsItem({ proyecto, setProyectoEditar, onEliminar, 
                                     <User className="h-4 w-4" />
                                     {proyecto.cliente_nombre}
                                 </div>
-                                <Badge className={getStatusColor(proyecto.estado)}>
-                                    {getStatusText(proyecto.estado)}
-                                </Badge>
                             </div>
                         </div>
                         <div className="text-right">
@@ -152,10 +153,6 @@ export default function ProjectsItem({ proyecto, setProyectoEditar, onEliminar, 
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
-                        {proyecto.descripcion && (
-                            <p className="text-green-700 text-sm">{proyecto.descripcion}</p>
-                        )}
-                        
                         <div>
                             <h4 className="text-sm font-medium text-green-800 mb-3">
                                 Presupuestos del Proyecto ({proyecto.budgets_count || 0})
@@ -168,7 +165,6 @@ export default function ProjectsItem({ proyecto, setProyectoEditar, onEliminar, 
                                                 <TableHead className="text-green-800">Presupuesto</TableHead>
                                                 <TableHead className="text-green-800">Valor</TableHead>
                                                 <TableHead className="text-green-800">Estado</TableHead>
-                                                <TableHead className="text-green-800 w-[100px]">Acciones</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -182,29 +178,6 @@ export default function ProjectsItem({ proyecto, setProyectoEditar, onEliminar, 
                                                         <Badge className={getStatusColor(budget.estado)} variant="outline">
                                                             {getStatusText(budget.estado)}
                                                         </Badge>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                                    <MoreHorizontal className="h-4 w-4" />
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem>
-                                                                    <Eye className="h-4 w-4 mr-2" />
-                                                                    Ver detalles
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem>
-                                                                    <Edit className="h-4 w-4 mr-2" />
-                                                                    Editar
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem className="text-red-600">
-                                                                    <Trash2 className="h-4 w-4 mr-2" />
-                                                                    Eliminar
-                                                                </DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
@@ -225,15 +198,7 @@ export default function ProjectsItem({ proyecto, setProyectoEditar, onEliminar, 
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="border-green-300 text-green-700 hover:bg-green-50"
-                                >
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    Ver Proyecto
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={handleAgregarBudget}
+                                    onClick={() => setAddBudgetModalOpen(true)}
                                     className="border-green-300 text-green-700 hover:bg-green-50"
                                 >
                                     <Plus className="h-4 w-4 mr-2" />
@@ -273,6 +238,13 @@ export default function ProjectsItem({ proyecto, setProyectoEditar, onEliminar, 
                     </div>
                 </CardContent>
             </Card>
+
+            <AddBudgetModal
+                proyectoId={proyecto.id}
+                open={addBudgetModalOpen}
+                onOpenChange={setAddBudgetModalOpen}
+                onBudgetAdded={handleBudgetAdded}
+            />
 
             <ConfirmDialog
                 open={proyectoAEliminar !== null}

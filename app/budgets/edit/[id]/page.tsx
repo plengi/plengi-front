@@ -88,8 +88,6 @@ export default function EditBudgetPage() {
                     setBudgetData({
                         name: data.nombre || "",
                         description: data.descripcion || "",
-                        project: data.proyecto || "",
-                        client: data.cliente || "",
                         sections: sections,
                         apus: apus,
                         indirectCosts: indirectCosts,
@@ -149,8 +147,6 @@ export default function EditBudgetPage() {
                 id: params.id,
                 nombre: budgetData.name,
                 descripcion: budgetData.description,
-                proyecto: budgetData.project,
-                cliente: budgetData.client,
                 secciones: seccionesConOrden,
                 apus: budgetData.apus.map(apu => ({
                     apuId: apu.apuId,
