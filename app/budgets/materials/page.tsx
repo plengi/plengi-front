@@ -2,14 +2,15 @@
 
 import type React from "react";
 import { useState } from 'react';
-import FormMateriales from './form';
-import TablaMateriales from './table';
+import InsumoForm from '../insumos/form';
+import InsumoTable from '../insumos/table';
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
+import { Package } from "lucide-react";
 
-interface Materiales {
+interface Insumo {
     id: number;
     nombre: string;
     unidad_medida: string;
@@ -20,7 +21,7 @@ interface Materiales {
 
 export default function MaterialesPage() {
     const { loading } = useAuthRedirect();
-    const [materiales, setMateriales] = useState<Materiales[]>([]);
+    const [materiales, setMateriales] = useState<Insumo[]>([]);
 
     if (loading) {
         return <div className="p-4 text-center">Cargando...</div>;
@@ -39,19 +40,27 @@ export default function MaterialesPage() {
                     />
                 </div>
 
-                <FormMateriales
-                    setMateriales={setMateriales}
+                <InsumoForm
+                    setInsumos={setMateriales}
+                    tipoProducto={0}
+                    titulo="Material"
+                    descripcion="Completa la información del material"
+                    icon={<Package className="h-5 w-5 text-green-600" />}
                     mostrarBotonCrear={true}
                 />
             </div>
         </header>
         <main className="flex-1 space-y-6 p-6 bg-gradient-to-br from-green-50/30 to-white">
             <p className="text-green-700">
-                Gestiona y visualiza todos tus proyectos de ingeniería civil
+                Gestiona y visualiza todos tus materiales de construcción
             </p>
-            <TablaMateriales
-                materiales={materiales}
-                setMateriales={setMateriales}
+            <InsumoTable
+                insumos={materiales}
+                setInsumos={setMateriales}
+                tipoProducto={0}
+                titulo="Materiales"
+                descripcion="Lista completa de materiales disponibles para presupuestos"
+                icon={<Package className="h-4 w-4" />}
             />
         </main>
     </>);

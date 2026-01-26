@@ -2,14 +2,15 @@
 
 import type React from "react";
 import { useState } from 'react';
-import FormTransportes from './form';
-import TablaTransportes from './table';
+import InsumoForm from '../insumos/form';
+import InsumoTable from '../insumos/table';
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
+import { Truck } from "lucide-react";
 
-interface Transportes {
+interface Insumo {
     id: number;
     nombre: string;
     unidad_medida: string;
@@ -20,7 +21,7 @@ interface Transportes {
 
 export default function TransportesPage() {
     const { loading } = useAuthRedirect();
-    const [transportes, setTransportes] = useState<Transportes[]>([]);
+    const [transportes, setTransportes] = useState<Insumo[]>([]);
 
     if (loading) {
         return <div className="p-4 text-center">Cargando...</div>;
@@ -39,19 +40,27 @@ export default function TransportesPage() {
                     />
                 </div>
 
-                <FormTransportes
-                    setTransportes={setTransportes}
+                <InsumoForm
+                    setInsumos={setTransportes}
+                    tipoProducto={3}
+                    titulo="Transporte"
+                    descripcion="Completa la información del transporte"
+                    icon={<Truck className="h-5 w-5 text-green-600" />}
                     mostrarBotonCrear={true}
                 />
             </div>
         </header>
         <main className="flex-1 space-y-6 p-6 bg-gradient-to-br from-green-50/30 to-white">
             <p className="text-green-700">
-                Gestiona y visualiza todos tus proyectos de ingeniería civil
+                Gestiona y visualiza todos tus servicios de transporte
             </p>
-            <TablaTransportes
-                transportes={transportes}
-                setTransportes={setTransportes}
+            <InsumoTable
+                insumos={transportes}
+                setInsumos={setTransportes}
+                tipoProducto={3}
+                titulo="Transportes"
+                descripcion="Lista completa de transportes disponibles para presupuestos"
+                icon={<Truck className="h-4 w-4" />}
             />
         </main>
     </>);

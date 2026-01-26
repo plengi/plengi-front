@@ -2,14 +2,15 @@
 
 import type React from "react";
 import { useState } from 'react';
-import FormEquipos from './form';
-import TablaEquipos from './table';
+import InsumoForm from '../insumos/form';
+import InsumoTable from '../insumos/table';
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
+import { Wrench } from "lucide-react";
 
-interface Equipos {
+interface Insumo {
     id: number;
     nombre: string;
     unidad_medida: string;
@@ -20,7 +21,7 @@ interface Equipos {
 
 export default function EquiposPage() {
     const { loading } = useAuthRedirect();
-    const [equipos, setEquipos] = useState<Equipos[]>([]);
+    const [equipos, setEquipos] = useState<Insumo[]>([]);
 
     if (loading) {
         return <div className="p-4 text-center">Cargando...</div>;
@@ -39,19 +40,27 @@ export default function EquiposPage() {
                     />
                 </div>
 
-                <FormEquipos
-                    setEquipos={setEquipos}
+                <InsumoForm
+                    setInsumos={setEquipos}
+                    tipoProducto={1}
+                    titulo="Equipo"
+                    descripcion="Completa la información del equipo"
+                    icon={<Wrench className="h-5 w-5 text-green-600" />}
                     mostrarBotonCrear={true}
                 />
             </div>
         </header>
         <main className="flex-1 space-y-6 p-6 bg-gradient-to-br from-green-50/30 to-white">
             <p className="text-green-700">
-                Gestiona y visualiza todos tus proyectos de ingeniería civil
+                Gestiona y visualiza todos tus equipos de construcción
             </p>
-            <TablaEquipos
-                equipos={equipos}
-                setEquipos={setEquipos}
+            <InsumoTable
+                insumos={equipos}
+                setInsumos={setEquipos}
+                tipoProducto={1}
+                titulo="Equipos"
+                descripcion="Lista completa de equipos disponibles para presupuestos"
+                icon={<Wrench className="h-4 w-4" />}
             />
         </main>
     </>);
