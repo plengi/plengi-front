@@ -3,8 +3,10 @@
 import type React from "react"
 
 export default function APULayout({ children }: { children: React.ReactNode }) {
-
+    
     return (
-        <body>{children}</body>
+        <div className="min-h-screen bg-gradient-to-br from-green-50/30 to-white">
+            {children}
+        </div>
     );
 }

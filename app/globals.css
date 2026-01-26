@@ -92,3 +92,20 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Estilos para el Sidebar en responsive */
+@media (max-width: 768px) {
+  [data-sidebar="sidebar"] {
+    background-color: white !important;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1) !important;
+  }
+  
+  .sidebar-overlay {
+    background-color: rgba(0, 0, 0, 0.5) !important;
+  }
+}
+
+/* Asegurar que el contenido del sidebar sea visible */
+.sidebar-content {
+  background-color: white !important;
+}
