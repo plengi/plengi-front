@@ -14,6 +14,8 @@ import { useToast } from "@/hooks/use-toast"
 import apiClient from "@/app/api/apiClient"
 import { BudgetData } from "../../components/types"
 
+export const dynamicParams = false
+
 export default function EditBudgetPage() {
     const router = useRouter()
     const params = useParams()

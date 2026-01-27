@@ -36,8 +36,6 @@ export const formatPrice = (price: string | number): string => {
 const initialBudgetData: BudgetData = {
     name: "",
     description: "",
-    project: "",
-    client: "",
     sections: [
         {
             id: "preliminares",
