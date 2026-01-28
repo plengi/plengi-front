@@ -14,16 +14,16 @@ echo "📥 Obteniendo cambios de Git..."
 git pull
 
 # 4. Instalar dependencias si hay cambios en package.json
-if git diff HEAD@{1} HEAD --name-only | grep -q "package.json"; then
-    echo "📦 Instalando dependencias..."
-    npm install --legacy-peer-deps
-fi
+# if git diff HEAD@{1} HEAD --name-only | grep -q "package.json"; then
+#     echo "📦 Instalando dependencias..."
+#     npm install --legacy-peer-deps
+# fi
 
 # 5. Reconstruir si hay cambios relevantes
-if git diff HEAD@{1} HEAD --name-only | grep -q -E "\.(js|jsx|ts|tsx|css|json)$"; then
-    echo "🔨 Reconstruyendo Next.js..."
-    npm run build
-fi
+# if git diff HEAD@{1} HEAD --name-only | grep -q -E "\.(js|jsx|ts|tsx|css|json)$"; then
+#     echo "🔨 Reconstruyendo Next.js..."
+#     npm run build
+# fi
 
 # 6. Reiniciar PM2
 echo "🔄 Reiniciando PM2..."
