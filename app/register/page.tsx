@@ -4,66 +4,108 @@ import type React from "react";
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Chrome, Facebook } from "lucide-react";
+import { Chrome, Eye, EyeOff, Facebook } from "lucide-react";
 import apiClient from "@/app/api/apiClient";
-import { Card, CardContent, CardDescription, 
-  CardFooter, CardHeader, CardTitle,} from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/dist/client/components/navigation";
+import { toast } from "sonner";
 
 export default function RegisterPage() {
   // -------------------------
   // Estados del formulario
   // -------------------------
-  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false); // estado de carga
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const router = useRouter();
+
+  //Validar campos antes de enviar al backend
+  const validateForm = () => {
+    if (!username.trim()) {
+      toast.error("El nombre es obligatorio");
+      return false;
+    }
+
+    if (!email.trim()) {
+      toast.error("El correo electrónico es obligatorio");
+      return false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error("El correo electrónico no es válido");
+      return false;
+    }
+
+    if (password.length < 5) {
+      toast.error("La contraseña debe tener al menos 5 caracteres");
+      return false;
+    }
+
+    if (password !== confirmPassword) {
+      toast.error("Las contraseñas no coinciden");
+      return false;
+    }
+
+    return true;
+  };
 
   // -------------------------
   // Envío del formulario
   // -------------------------
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); // evita recarga de página
+    e.preventDefault();
 
-    // Validación básica en frontend
-    if (password !== confirmPassword) {
-      alert("Las contraseñas no coinciden.");
-      return;
-    }
+    if (!validateForm()) return;
 
-    setLoading(true); // inicia loading
+    setLoading(true);
 
     try {
-      // Llamada a la API 
       const response = await apiClient.post("/register", {
-        name,
+        username,
         email,
         password,
       });
 
-      // Respuesta del backend
-      console.log("Respuesta backend:", response.data);
+      localStorage.setItem("user", JSON.stringify(response.data.user));
+      toast.success("Usuario registrado correctamente");
+      router.push("/login");
 
-      alert("Usuario registrado correctamente");
-
-      // Limpia el formulario después del registro
-      setName("");
+      setUsername("");
       setEmail("");
       setPassword("");
       setConfirmPassword("");
     } catch (error: any) {
-      console.error("Error registro:", error.response?.data || error.message);
-
       if (error.response?.status === 422) {
-        alert("Error de validación. El correo ya puede existir.");
+        const errors = error.response.data.errors;
+
+        // Muestra el primer error que venga del backend
+        if (errors) {
+          const firstError = Object.values(errors)[0] as string[];
+          toast.error(firstError[0]);
+        } else {
+          toast.error("Datos inválidos. Revisa tu información.");
+        }
       } else {
-        alert("Error al registrar usuario");
+        toast.error("Error al registrar usuario");
       }
     } finally {
-      setLoading(false); 
+      setLoading(false);
     }
   };
 
@@ -80,7 +122,9 @@ export default function RegisterPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-dollar-900/80 to-transparent" />
         <div className="absolute bottom-8 left-8 text-white">
-          <h2 className="text-4xl font-bold mb-2">Únete a Nuestra Plataforma</h2>
+          <h2 className="text-4xl font-bold mb-2">
+            Únete a Nuestra Plataforma
+          </h2>
           <p className="text-lg">
             Comienza a optimizar tus proyectos de ingeniería hoy mismo.
           </p>
@@ -101,13 +145,14 @@ export default function RegisterPage() {
           <CardContent className="grid gap-6">
             <form onSubmit={handleSubmit} className="grid gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="name">Nombre Completo</Label>
+                <Label htmlFor="username">Nombre Completo</Label>
                 <Input
-                  id="name"
+                  id="username"
                   type="text"
                   required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="border-dollar-300 focus:border-dollar-500 focus:ring-dollar-500"
                 />
               </div>
 
@@ -119,33 +164,62 @@ export default function RegisterPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  className="border-dollar-300 focus:border-dollar-500 focus:ring-dollar-500"
                 />
               </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="password">Contraseña</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pr-10 border-dollar-300 focus:border-dollar-500 focus:ring-dollar-500"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="confirm-password">
-                  Confirmar Contraseña
-                </Label>
-                <Input
-                  id="confirm-password"
-                  type="password"
-                  required
-                  value={confirmPassword}
-                  onChange={(e) =>
-                    setConfirmPassword(e.target.value)
-                  }
-                />
+                <Label htmlFor="confirm-password">Confirmar Contraseña</Label>
+
+                <div className="relative">
+                  <Input
+                    id="confirm-password"
+                    type={showConfirmPassword ? "text" : "password"}
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="pr-10 border-dollar-300 focus:border-dollar-500 focus:ring-dollar-500"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <Button
@@ -171,15 +245,16 @@ export default function RegisterPage() {
             <div className="grid grid-cols-2 gap-4">
               <Button
                 variant="outline"
-                className="w-full"
-                onClick={() => alert("Google próximamente")}
+                className="w-full flex items-center justify-center gap-2 border-dollar-300 text-dollar-700 hover:bg-dollar-100 bg-transparent"
+                onClick={() => toast("Google próximamente", { icon: "😎" })}
+                
               >
                 <Chrome className="h-4 w-4 mr-2" /> Google
               </Button>
               <Button
                 variant="outline"
-                className="w-full"
-                onClick={() => alert("Facebook próximamente")}
+                className="w-full flex items-center justify-center gap-2 border-dollar-300 text-dollar-700 hover:bg-dollar-100 bg-transparent"
+                onClick={() => toast("Facebook próximamente", { icon: "😎" })}
               >
                 <Facebook className="h-4 w-4 mr-2" /> Facebook
               </Button>
@@ -188,10 +263,7 @@ export default function RegisterPage() {
 
           <CardFooter className="text-center text-sm text-dollar-600">
             ¿Ya tienes una cuenta?{" "}
-            <Link
-              href="/login"
-              className="underline text-dollar-700"
-            >
+            <Link href="/login" className="underline text-dollar-700">
               Iniciar Sesión
             </Link>
           </CardFooter>
