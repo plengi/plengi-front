@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link";
 import {
     GripVertical,
     MoveVertical,
@@ -8,6 +9,7 @@ import {
     Trash2,
     Edit,
     Package,
+    Calculator,
 } from "lucide-react"
 import {
     Card,
@@ -36,6 +38,7 @@ import {
 import EditSectionDialog from "@/app/budgets/components/EditSectionDialog"
 import { BudgetData } from "../types"
 import { formatPrice } from "."
+import router from "next/dist/client/router"
 
 interface BudgetSectionsCardProps {
     budgetData: BudgetData
@@ -184,19 +187,27 @@ export default function BudgetSectionsCard({
                                                         <TableCell>{apu.unit}</TableCell>
                                                         <TableCell>{formatPrice(apu.unitPrice)}</TableCell>
                                                         <TableCell>
-                                                            <Input
-                                                                type="number"
-                                                                min="0.01"
-                                                                step="0.01"
-                                                                value={apu.quantity}
-                                                                onChange={(e) =>
-                                                                    onUpdateAPUQuantity(
-                                                                        apu.id,
-                                                                        Number.parseFloat(e.target.value) || 0
-                                                                    )
-                                                                }
-                                                                className="w-20 h-8 text-sm border-green-200"
-                                                            />
+                                                            <div className="flex items-center gap-1">
+                                                                <Input
+                                                                    type="number"
+                                                                    min="0.01"
+                                                                    step="0.01"
+                                                                    value={apu.quantity}
+                                                                    onChange={(e) =>
+                                                                        onUpdateAPUQuantity(
+                                                                            apu.id,
+                                                                            Number.parseFloat(e.target.value) || 0
+                                                                        )
+                                                                    }
+                                                                    className="w-20 h-8 text-sm border-green-200"
+                                                                />
+                                                                <Link
+                                                                    href={`/budgets/justify-quantity/${parseInt((apu.id+'').split('budget-apu-')[1])}`}
+                                                                    title="Justificar"
+                                                                >
+                                                                    <Calculator className="h-4 w-4" />
+                                                                </Link>
+                                                            </div>
                                                         </TableCell>
                                                         <TableCell className="font-medium">
                                                             {formatPrice(apu.total)}
