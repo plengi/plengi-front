@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { Toaster } from "@/components/ui/toaster";
 import {
   Dialog,
   DialogContent,
@@ -38,9 +40,11 @@ import { Building2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Importar Avatar
 import apiClient from "../api/apiClient";
 import { Combobox } from "@headlessui/react";
-import { toast } from "sonner";
 
 export default function ProfilePage() {
+
+  const { toast } = useToast();
+
   // === Estados ===
   const [userData, setUserData] = useState<any>(null);
   const [empresa, setEmpresa] = useState<any>(null);
@@ -172,7 +176,11 @@ export default function ProfilePage() {
     );
 
     if (Object.keys(cleanedData).length === 0) {
-      toast.info("No hay cambios para guardar");
+      toast({
+        variant: "default",
+        title: "Sin cambios",
+        description: "No se han realizado cambios para guardar",
+      });
       return;
     }
 
@@ -195,14 +203,22 @@ export default function ProfilePage() {
       );
 
       setIsEditing(false);
-      toast.success(message || "Perfil actualizado correctamente");
+      toast({
+        variant: "success",
+        title: "Perfil actualizado",
+        description: message || "Tu perfil ha sido actualizado correctamente",
+      });
     } catch (error: any) {
       console.error("Error al actualizar perfil:", error);
 
       const msg =
         error.response?.data?.message || "No se pudo actualizar el perfil";
 
-      toast.error(msg);
+      toast({
+        variant: "destructive",
+        title: "Error al actualizar perfil",
+        description: msg,
+      });
     }
   };
 
@@ -578,6 +594,7 @@ export default function ProfilePage() {
             </DialogContent>
           </Dialog>
         )}
+        <Toaster />
       </main>
     </>
   );

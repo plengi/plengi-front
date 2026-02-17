@@ -17,48 +17,72 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/dist/client/components/navigation";
-import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
+import { Toaster } from "@/components/ui/toaster";
 
 export default function RegisterPage() {
+  const { toast } = useToast();
+  const router = useRouter();
+
   // -------------------------
-  // Estados del formulario
+  // Estados
   // -------------------------
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false); // estado de carga
+  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const router = useRouter();
-
-  //Validar campos antes de enviar al backend
+  // -------------------------
+  // Validación
+  // -------------------------
   const validateForm = () => {
     if (!username.trim()) {
-      toast.error("El nombre es obligatorio");
+      toast({
+        variant: "destructive",
+        title: "Campo requerido",
+        description: "El nombre es obligatorio",
+      });
       return false;
     }
 
     if (!email.trim()) {
-      toast.error("El correo electrónico es obligatorio");
+      toast({
+        variant: "destructive",
+        title: "Campo requerido",
+        description: "El correo electrónico es obligatorio",
+      });
       return false;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      toast.error("El correo electrónico no es válido");
+      toast({
+        variant: "destructive",
+        title: "Email inválido",
+        description: "El correo electrónico no es válido",
+      });
       return false;
     }
 
     if (password.length < 5) {
-      toast.error("La contraseña debe tener al menos 5 caracteres");
+      toast({
+        variant: "destructive",
+        title: "Contraseña inválida",
+        description: "Debe tener al menos 5 caracteres",
+      });
       return false;
     }
 
     if (password !== confirmPassword) {
-      toast.error("Las contraseñas no coinciden");
+      toast({
+        variant: "destructive",
+        title: "Error de validación",
+        description: "Las contraseñas no coinciden",
+      });
       return false;
     }
 
@@ -66,7 +90,7 @@ export default function RegisterPage() {
   };
 
   // -------------------------
-  // Envío del formulario
+  // Envío
   // -------------------------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,26 +107,43 @@ export default function RegisterPage() {
       });
 
       localStorage.setItem("user", JSON.stringify(response.data.user));
-      toast.success("Usuario registrado correctamente");
-      router.push("/login");
+
+      toast({
+        variant: "success",
+        title: "Registro exitoso",
+        description: "Usuario registrado correctamente",
+      });
 
       setUsername("");
       setEmail("");
       setPassword("");
       setConfirmPassword("");
+
+      router.push("/login");
     } catch (error: any) {
       if (error.response?.status === 422) {
         const errors = error.response.data.errors;
 
-        // Muestra el primer error que venga del backend
         if (errors) {
           const firstError = Object.values(errors)[0] as string[];
-          toast.error(firstError[0]);
+          toast({
+            variant: "destructive",
+            title: "Error de validación",
+            description: firstError[0],
+          });
         } else {
-          toast.error("Datos inválidos. Revisa tu información.");
+          toast({
+            variant: "destructive",
+            title: "Datos inválidos",
+            description: "Revisa tu información",
+          });
         }
       } else {
-        toast.error("Error al registrar usuario");
+        toast({
+          variant: "destructive",
+          title: "Error del servidor",
+          description: "No se pudo registrar el usuario",
+        });
       }
     } finally {
       setLoading(false);
@@ -148,8 +189,6 @@ export default function RegisterPage() {
                 <Label htmlFor="username">Nombre Completo</Label>
                 <Input
                   id="username"
-                  type="text"
-                  required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="border-dollar-300 focus:border-dollar-500 focus:ring-dollar-500"
@@ -161,30 +200,27 @@ export default function RegisterPage() {
                 <Input
                   id="email"
                   type="email"
-                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="border-dollar-300 focus:border-dollar-500 focus:ring-dollar-500"
                 />
               </div>
 
+              {/* PASSWORD */}
               <div className="grid gap-2">
                 <Label htmlFor="password">Contraseña</Label>
-
                 <div className="relative">
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="pr-10 border-dollar-300 focus:border-dollar-500 focus:ring-dollar-500"
                   />
-
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700"
+                    className="absolute inset-y-0 right-2 flex items-center text-gray-500"
                   >
                     {showPassword ? (
                       <EyeOff className="h-5 w-5" />
@@ -195,23 +231,23 @@ export default function RegisterPage() {
                 </div>
               </div>
 
+              {/* CONFIRM PASSWORD */}
               <div className="grid gap-2">
                 <Label htmlFor="confirm-password">Confirmar Contraseña</Label>
-
                 <div className="relative">
                   <Input
                     id="confirm-password"
                     type={showConfirmPassword ? "text" : "password"}
-                    required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className="pr-10 border-dollar-300 focus:border-dollar-500 focus:ring-dollar-500"
                   />
-
                   <button
                     type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700"
+                    onClick={() =>
+                      setShowConfirmPassword(!showConfirmPassword)
+                    }
+                    className="absolute inset-y-0 right-2 flex items-center text-gray-500"
                   >
                     {showConfirmPassword ? (
                       <EyeOff className="h-5 w-5" />
@@ -231,6 +267,7 @@ export default function RegisterPage() {
               </Button>
             </form>
 
+            {/* Divider */}
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t border-dollar-200" />
@@ -245,16 +282,26 @@ export default function RegisterPage() {
             <div className="grid grid-cols-2 gap-4">
               <Button
                 variant="outline"
-                className="w-full flex items-center justify-center gap-2 border-dollar-300 text-dollar-700 hover:bg-dollar-100 bg-transparent"
-                onClick={() => toast("Google próximamente", { icon: "😎" })}
-                
+                className="border-dollar-300 text-dollar-700 hover:bg-dollar-100"
+                onClick={() =>
+                  toast({
+                    title: "Próximamente",
+                    description: "Registro con Google disponible pronto 😎",
+                  })
+                }
               >
                 <Chrome className="h-4 w-4 mr-2" /> Google
               </Button>
+
               <Button
                 variant="outline"
-                className="w-full flex items-center justify-center gap-2 border-dollar-300 text-dollar-700 hover:bg-dollar-100 bg-transparent"
-                onClick={() => toast("Facebook próximamente", { icon: "😎" })}
+                className="border-dollar-300 text-dollar-700 hover:bg-dollar-100"
+                onClick={() =>
+                  toast({
+                    title: "Próximamente",
+                    description: "Registro con Facebook disponible pronto 😎",
+                  })
+                }
               >
                 <Facebook className="h-4 w-4 mr-2" /> Facebook
               </Button>
@@ -269,6 +316,8 @@ export default function RegisterPage() {
           </CardFooter>
         </Card>
       </div>
+
+      <Toaster />
     </div>
   );
 }

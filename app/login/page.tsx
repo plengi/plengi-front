@@ -6,6 +6,8 @@ import Image from "next/image";
 import apiClient from "@/app/api/apiClient";
 import { Chrome, Facebook } from "lucide-react";
 import Link from "next/link"; // Import Link for navigation
+import { useToast } from "@/hooks/use-toast";
+import { Toaster } from "@/components/ui/toaster";
 import {
   Card,
   CardContent,
@@ -17,7 +19,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 
 export default function LoginPage() {
   const [error, setError] = useState("");
@@ -25,20 +26,35 @@ export default function LoginPage() {
   const [password, setPassword] = useState("secret");
   const [email, setEmail] = useState("admin@argon.com");
 
+  const { toast } = useToast();
+
   const validateLogin = () => {
     if (!email.trim()) {
-      toast.error("El correo electrónico es obligatorio");
+      toast({
+        variant: "destructive",
+        title: "Campo requerido",
+        description: "El correo electrónico es obligatorio",
+      });
+
       return false;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      toast.error("El correo electrónico no es válido");
+      toast({
+        variant: "destructive",
+        title: "Correo inválido",
+        description: "Por favor, ingresa un correo electrónico válido",
+      });
       return false;
     }
 
     if (!password.trim()) {
-      toast.error("La contraseña es obligatoria");
+      toast({
+        variant: "destructive",
+        title: "Campo requerido",
+        description: "La contraseña es obligatoria",
+      });
       return false;
     }
 
@@ -66,7 +82,11 @@ export default function LoginPage() {
         JSON.stringify(response.data.empresa),
       );
 
-      toast.success("Inicio de sesión exitoso");
+      toast({
+        variant: "success",
+        title: "Inicio de sesión exitoso",
+        description: "Has iniciado sesión correctamente.",
+      });
 
       if (response.data.empresa) {
         window.location.href = "/dashboard";
@@ -74,18 +94,28 @@ export default function LoginPage() {
         window.location.href = "/company";
       }
     } catch (error: any) {
-      toast.error("Correo o contraseña incorrectos");
+      toast({
+        variant: "destructive",
+        title: "Error de inicio de sesión",
+        description: "Correo o contraseña incorrectos",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleLogin = () => {
-    toast("Google próximamente", { icon: "😎" });
+    toast({
+      title: "Google Login",
+      description: "Google login próximamente 😎",
+    });
   };
 
   const handleFacebookLogin = () => {
-    toast("Facebook próximamente", { icon: "😎" });
+    toast({
+      title: "Facebook Login",
+      description: "Facebook login próximamente 😎",
+    });
   };
 
   return (
@@ -188,15 +218,16 @@ export default function LoginPage() {
           </CardContent>
 
           <CardFooter className="text-center text-sm text-dollar-600">
-            ¿No tienes una cuenta? {" "}
+            ¿No tienes una cuenta?{" "}
             <Link
               href="/register"
               className="m-1 underline text-dollar-700 hover:text-dollar-800 font-medium"
             >
-               Regístrate
+              Regístrate
             </Link>
           </CardFooter>
         </Card>
+        <Toaster />
       </div>
     </div>
   );
