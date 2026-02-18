@@ -315,9 +315,8 @@ export default function RegisterPage() {
             </Link>
           </CardFooter>
         </Card>
+        <Toaster />
       </div>
-
-      <Toaster />
     </div>
   );
 }

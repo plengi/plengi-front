@@ -1,18 +1,15 @@
 'use client';
 
-import type React from "react";
 import { useState, useEffect } from 'react';
 import Link from "next/link";
 import TablaPresupuesto from './table';
 import { useToast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Building2, Calculator, FileText, Home, Settings, Users, Search, Bell, User, MapPin, Plus, MoreHorizontal, Eye, Edit, Trash2, Filter, ArrowUpDown, DollarSign, Briefcase, BarChart3, PieChart, Package, Truck, Wrench, HardHat, ClipboardList, Loader2 } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card";
+import { Search, Plus, Calculator } from "lucide-react";
 import apiClient from '@/app/api/apiClient';
 
 interface Presupuesto {
@@ -33,9 +30,12 @@ interface Presupuesto {
 export default function PresupuestoPage() {
     const { loading: authLoading } = useAuthRedirect();
     const { toast } = useToast();
+
     const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+
     const [pagination, setPagination] = useState({
         page: 1,
         perPage: 10,
@@ -43,7 +43,7 @@ export default function PresupuestoPage() {
         totalPages: 0,
     });
 
-    // Función para cargar los presupuestos
+    // 🔥 Fetch principal
     const fetchPresupuestos = async (page = 1, searchTerm = '') => {
         setLoading(true);
         try {
@@ -56,18 +56,21 @@ export default function PresupuestoPage() {
             });
 
             if (response.data.success) {
+                const total = response.data.iTotalDisplayRecords;
+
                 setPresupuestos(response.data.data);
                 setPagination(prev => ({
                     ...prev,
                     page,
-                    total: response.data.iTotalDisplayRecords,
-                    totalPages: Math.ceil(response.data.iTotalDisplayRecords / prev.perPage)
+                    total,
+                    totalPages: Math.ceil(total / prev.perPage),
                 }));
             } else {
-                throw new Error(response.data.message || 'Error al cargar presupuestos');
+                throw new Error(response.data.message);
             }
+
         } catch (error) {
-            console.error('Error al cargar presupuestos:', error);
+            console.error(error);
             toast({
                 variant: 'destructive',
                 title: 'Error',
@@ -78,27 +81,22 @@ export default function PresupuestoPage() {
         }
     };
 
-    // Efecto para cargar los presupuestos al inicio y cuando cambia la página o búsqueda
-    useEffect(() => {
-        if (!authLoading) {
-            fetchPresupuestos(pagination.page, search);
-        }
-    }, [authLoading, pagination.page]);
-
-    // Efecto para búsqueda con debounce
+    // 🔎 Debounce de búsqueda
     useEffect(() => {
         const timer = setTimeout(() => {
-            if (!authLoading) {
-                fetchPresupuestos(1, search);
-            }
+            setDebouncedSearch(search);
+            setPagination(prev => ({ ...prev, page: 1 }));
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [search, authLoading]);
+    }, [search]);
 
-    if (authLoading) {
-        return <div className="p-4 text-center">Cargando...</div>;
-    }
+    // 📦 Único efecto que ejecuta el fetch
+    useEffect(() => {
+        if (!authLoading) {
+            fetchPresupuestos(pagination.page, debouncedSearch);
+        }
+    }, [authLoading, pagination.page, debouncedSearch]);
 
     const handlePageChange = (newPage: number) => {
         if (newPage >= 1 && newPage <= pagination.totalPages) {
@@ -106,12 +104,20 @@ export default function PresupuestoPage() {
         }
     };
 
+    if (authLoading) {
+        return <div className="p-4 text-center">Cargando...</div>;
+    }
+
     return (
         <>
             <header className="sticky top-0 z-50 flex h-16 shrink-0 items-center gap-2 border-b border-green-100 px-4 bg-gradient-to-r from-green-50 to-white">
                 <SidebarTrigger className="-ml-1 text-green-600 hover:bg-green-100" />
+
                 <div className="flex flex-1 items-center gap-4">
-                    <h1 className="text-3xl font-bold tracking-tight text-green-900">Presupuestos</h1>
+                    <h1 className="text-3xl font-bold tracking-tight text-green-900">
+                        Presupuestos
+                    </h1>
+
                     <div className="relative flex-1">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-green-500" />
                         <Input
@@ -130,18 +136,42 @@ export default function PresupuestoPage() {
                     </Link>
                 </div>
             </header>
+
             <main className="flex-1 space-y-6 p-6 bg-gradient-to-br from-green-50/30 to-white">
                 <p className="text-green-700">
                     Gestiona y visualiza todos los presupuestos de tus proyectos
                 </p>
 
-                <TablaPresupuesto
-                    presupuestos={presupuestos}
-                    loading={loading}
-                    pagination={pagination}
-                    onPageChange={handlePageChange}
-                    onDelete={() => fetchPresupuestos(pagination.page, search)} // Recargar después de eliminar
-                />
+                {presupuestos.length === 0 && !loading ? (
+                    <Card className="border-green-200">
+                        <CardContent className="flex flex-col items-center justify-center py-12">
+                            <Calculator className="h-12 w-12 text-green-400 mb-4" />
+
+                            <h3 className="text-lg font-medium text-green-900 mb-2">
+                                No se encontraron presupuestos
+                            </h3>
+
+                            <p className="text-green-600 text-center mb-4">
+                                No hay presupuestos que coincidan con los criterios de búsqueda.
+                            </p>
+
+                            <Link href="/budgets/new">
+                                <Button className="gap-2 bg-green-600 hover:bg-green-700 text-white">
+                                    <Plus className="h-4 w-4" />
+                                    Crear Presupuesto
+                                </Button>
+                            </Link>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <TablaPresupuesto
+                        presupuestos={presupuestos}
+                        loading={loading}
+                        pagination={pagination}
+                        onPageChange={handlePageChange}
+                        onDelete={() => fetchPresupuestos(pagination.page, debouncedSearch)}
+                    />
+                )}
             </main>
         </>
     );
