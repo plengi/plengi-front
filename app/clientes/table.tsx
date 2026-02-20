@@ -131,8 +131,8 @@ export default function TablaClientes({ clientes, setClientes }: TablaClientesPr
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-green-50">
-                                <TableHead className="text-green-800">Nombres</TableHead>
-                                <TableHead className="text-green-800">Apellidos</TableHead>
+                                <TableHead className="text-green-800">Cliente</TableHead>
+                                {/* <TableHead className="text-green-800">Apellidos</TableHead> */}
                                 <TableHead className="text-green-800">Tipo Documento</TableHead>
                                 <TableHead className="text-green-800">Número Documento</TableHead>
                                 <TableHead className="text-green-800">Dirección</TableHead>
@@ -159,7 +159,7 @@ export default function TablaClientes({ clientes, setClientes }: TablaClientesPr
 
                                     <TableRow key={cliente.id} className="hover:bg-green-50/50">
                                         <TableCell className="font-medium text-green-900">{cliente.nombres}</TableCell>
-                                        <TableCell className="text-green-900">{cliente.apellidos}</TableCell>
+                                        {/* <TableCell className="text-green-900">{cliente.apellidos}</TableCell> */}
                                         <TableCell className="text-green-900">{cliente.tipo_documento}</TableCell>
                                         <TableCell className="text-green-900">{cliente.numero_documento}</TableCell>
                                         <TableCell className="text-green-900">{cliente.direccion}</TableCell>

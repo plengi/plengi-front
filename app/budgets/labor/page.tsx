@@ -1,14 +1,16 @@
 'use client';
 
 import type React from "react";
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import InsumoForm from '../insumos/form';
 import InsumoTable from '../insumos/table';
-import { Search } from "lucide-react";
+import { HardHat, Search, Users2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { Users } from "lucide-react";
+import apiClient from "@/app/api/apiClient";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface Insumo {
     id: number;
@@ -22,9 +24,37 @@ interface Insumo {
 export default function ManoObraPage() {
     const { loading } = useAuthRedirect();
     const [manoObra, setManoObra] = useState<Insumo[]>([]);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [loadingManoObra, setLoadingManoObra] = useState(false);
 
-    if (loading) {
-        return <div className="p-4 text-center">Cargando...</div>;
+    useEffect(() => {
+        if (!loading) {
+            fetchManoObra();
+        }
+    }, [loading]);
+
+    const fetchManoObra = async () => {
+        setLoadingManoObra(true);
+        try {
+            const response = await apiClient.get("/productos?start=0&length=15&tipo_producto=2");
+            setManoObra(response.data.data);
+        } catch (error) {
+            console.error("Error cargando mano de obra:", error);
+        } finally {
+            setLoadingManoObra(false);
+        }
+    };
+
+    const filteredManoObra = manoObra.filter((mano) => {
+        return (
+            mano.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            mano.unidad_medida.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            mano.valor.toString().toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    });
+
+    if (loading || loadingManoObra) {
+        return <div className="p-4 text-center">Cargando Mano de Obra...</div>;
     }
 
     return (<>
@@ -36,6 +66,8 @@ export default function ManoObraPage() {
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-green-500" />
                     <Input
                         placeholder="Buscar mano de obra"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-8 border-green-200 focus:border-green-400 focus:ring-green-400"
                     />
                 </div>
@@ -45,7 +77,7 @@ export default function ManoObraPage() {
                     tipoProducto={2}
                     titulo="Mano de Obra"
                     descripcion="Completa la información de la mano de obra"
-                    icon={<Users className="h-5 w-5 text-green-600" />}
+                    icon={<HardHat className="h-5 w-5 text-green-600" />}
                     mostrarBotonCrear={true}
                 />
             </div>
@@ -54,14 +86,37 @@ export default function ManoObraPage() {
             <p className="text-green-700">
                 Gestiona y visualiza todos tus recursos de mano de obra
             </p>
-            <InsumoTable
-                insumos={manoObra}
+            {filteredManoObra.length === 0 ? (
+          <Card className="border-green-200">
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <HardHat className="h-12 w-12 text-green-400 mb-4" />
+              <h3 className="text-lg font-medium text-green-900 mb-2">
+                No se encontraron recursos de mano de obra
+              </h3>
+              <p className="text-green-600 text-center mb-4">
+                No hay equipos que coincidan con los criterios de búsqueda.
+              </p>
+              <InsumoForm
                 setInsumos={setManoObra}
                 tipoProducto={2}
                 titulo="Mano de Obra"
-                descripcion="Lista completa de mano de obra disponible para presupuestos"
-                icon={<Users className="h-4 w-4" />}
-            />
+                descripcion="Completa la información de la mano de obra"
+                icon={<HardHat className="h-5 w-5 text-green-600" />}
+                mostrarBotonCrear={true}
+                onSuccess={fetchManoObra}
+              />
+            </CardContent>
+          </Card>
+        ) : (
+          <InsumoTable
+            insumos={filteredManoObra}
+            setInsumos={setManoObra}
+            tipoProducto={2}
+            titulo="Mano de Obra"
+            descripcion="Lista completa de mano de obra disponible para presupuestos"
+            icon={<HardHat className="h-4 w-4" />}
+          />
+        )}
         </main>
     </>);
 }

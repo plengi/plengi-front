@@ -67,7 +67,7 @@ export default function ClienteForm({ setClientes, clienteEditar, setClienteEdit
     const [formData, setFormData] = useState({
         id: 0,
         nombres: "",
-        apellidos: "",
+        // apellidos: "",
         tipo_documento: "",
         numero_documento: "",
         direccion: "",
@@ -80,7 +80,7 @@ export default function ClienteForm({ setClientes, clienteEditar, setClienteEdit
             setFormData({
                 id: clienteEditar.id,
                 nombres: clienteEditar.nombres,
-                apellidos: clienteEditar.apellidos,
+                //apellidos: clienteEditar.apellidos,
                 tipo_documento: clienteEditar.tipo_documento,
                 numero_documento: clienteEditar.numero_documento,
                 direccion: clienteEditar.direccion,
@@ -99,7 +99,7 @@ export default function ClienteForm({ setClientes, clienteEditar, setClienteEdit
             setFormData({
                 id: 0,
                 nombres: "",
-                apellidos: "",
+                //apellidos: "",
                 tipo_documento: "",
                 numero_documento: "",
                 direccion: "",
@@ -177,7 +177,7 @@ export default function ClienteForm({ setClientes, clienteEditar, setClienteEdit
         setFormData({
             id: 0,
             nombres: "",
-            apellidos: "",
+            //apellidos: "",
             tipo_documento: "",
             numero_documento: "",
             direccion: "",
@@ -216,7 +216,7 @@ export default function ClienteForm({ setClientes, clienteEditar, setClienteEdit
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-0">
                         <Label htmlFor="nombres" className="text-green-800">
-                            Nombres <span className="text-red-500">*</span>
+                            Cliente <span className="text-red-500">*</span>
                         </Label>
                         <Input
                             id="nombres"
@@ -232,7 +232,7 @@ export default function ClienteForm({ setClientes, clienteEditar, setClienteEdit
                         )}
                     </div>
 
-                    <div className="space-y-0">
+                    {/* <div className="space-y-0">
                         <Label htmlFor="apellidos" className="text-green-800">
                             Apellidos
                         </Label>
@@ -244,7 +244,7 @@ export default function ClienteForm({ setClientes, clienteEditar, setClienteEdit
                             onChange={(e) => handleInputChange("apellidos", e.target.value)}
                             className="border-green-200 focus:border-green-400 focus:ring-green-400"
                         />
-                    </div>
+                    </div> */}
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-0">
