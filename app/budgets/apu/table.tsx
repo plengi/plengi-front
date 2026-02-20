@@ -12,8 +12,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
-    ArrowUpDown, Package, Plus, MoreHorizontal, Eye, Edit, Trash2,
-    Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight
+    ArrowUpDown, Plus, MoreHorizontal, Eye, Edit, Trash2,
+    Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
+    BarChart3
 } from "lucide-react";
 import { formatPrice, getTypeColor, calculatePagination, handleDeleteApu } from "./utils/apuUtils";
 
@@ -111,7 +112,7 @@ export default function TableApus({ apus, setApus }: TablaApusProps) {
                 <Card className="border-green-200 bg-gradient-to-br from-white to-green-50">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-green-800">Total Apus</CardTitle>
-                        <Package className="h-4 w-4 text-green-600" />
+                        <BarChart3 className="h-4 w-4 text-green-600" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-green-900">{totalRecords}</div>
