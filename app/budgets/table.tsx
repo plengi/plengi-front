@@ -175,7 +175,7 @@ export default function TablaPresupuesto({ presupuestos, loading, pagination, on
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                                                         <DropdownMenuItem asChild>
-                                                            <Link href={`/budgets/view/${presupuesto.id}`} className="cursor-pointer">
+                                                            <Link href={`/budgets/${presupuesto.id}`} className="cursor-pointer">
                                                                 <Eye className="mr-2 h-4 w-4" />
                                                                 Ver Detalles
                                                             </Link>
