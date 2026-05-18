@@ -586,19 +586,6 @@ export default function JustifyQuantityPage() {
                                                 <Plus className="h-4 w-4" />
                                                 Agregar Elemento
                                             </Button>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                onClick={() => {
-                                                    const newLabel = prompt('Nuevo título para "Valor":', columnLabels.sumValue)
-                                                    if (newLabel) {
-                                                        setColumnLabels({ ...columnLabels, sumValue: newLabel })
-                                                    }
-                                                }}
-                                                className="border-green-300 text-green-700 hover:bg-green-50 bg-transparent"
-                                            >
-                                                Editar Títulos
-                                            </Button>
                                         </div>
 
                                         {sumItems.length > 0 && (
@@ -678,19 +665,6 @@ export default function JustifyQuantityPage() {
                                             >
                                                 <Plus className="h-4 w-4" />
                                                 Agregar Área
-                                            </Button>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                onClick={() => {
-                                                    const newLength = prompt('Título para "Largo":', columnLabels.areaLength)
-                                                    if (newLength) setColumnLabels({ ...columnLabels, areaLength: newLength })
-                                                    const newWidth = prompt('Título para "Ancho":', columnLabels.areaWidth)
-                                                    if (newWidth) setColumnLabels({ ...columnLabels, areaWidth: newWidth })
-                                                }}
-                                                className="border-green-300 text-green-700 hover:bg-green-50 bg-transparent"
-                                            >
-                                                Editar Títulos
                                             </Button>
                                         </div>
 
@@ -781,21 +755,6 @@ export default function JustifyQuantityPage() {
                                             >
                                                 <Plus className="h-4 w-4" />
                                                 Agregar Volumen
-                                            </Button>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                onClick={() => {
-                                                    const newLength = prompt('Título para "Largo":', columnLabels.volumeLength)
-                                                    if (newLength) setColumnLabels({ ...columnLabels, volumeLength: newLength })
-                                                    const newWidth = prompt('Título para "Ancho":', columnLabels.volumeWidth)
-                                                    if (newWidth) setColumnLabels({ ...columnLabels, volumeWidth: newWidth })
-                                                    const newHeight = prompt('Título para "Alto":', columnLabels.volumeHeight)
-                                                    if (newHeight) setColumnLabels({ ...columnLabels, volumeHeight: newHeight })
-                                                }}
-                                                className="border-green-300 text-green-700 hover:bg-green-50 bg-transparent"
-                                            >
-                                                Editar Títulos
                                             </Button>
                                         </div>
 
@@ -896,17 +855,6 @@ export default function JustifyQuantityPage() {
                                             >
                                                 <Plus className="h-4 w-4" />
                                                 Agregar Acero
-                                            </Button>
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                onClick={() => {
-                                                    const newLength = prompt('Título para "Largo":', columnLabels.rebarLength)
-                                                    if (newLength) setColumnLabels({ ...columnLabels, rebarLength: newLength })
-                                                }}
-                                                className="border-green-300 text-green-700 hover:bg-green-50 bg-transparent"
-                                            >
-                                                Editar Títulos
                                             </Button>
                                         </div>
 
