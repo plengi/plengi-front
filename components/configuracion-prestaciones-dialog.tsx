@@ -13,16 +13,17 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, Save, X } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Trash2, Edit2, Check, X, ChevronDown, ChevronRight, Settings2 } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import apiClient from "@/app/api/apiClient";
 import { formatCurrency } from "@/lib/format";
-import { calcularTotalPrestaciones } from "@/lib/laborUtils";
 
+// ---------- Tipos ----------
 interface Factor {
     id?: number;
-    categoria: string;
+    categoria: string;        // "seguridad_social", "prestaciones", "parafiscales", "otros"
     nombre_factor: string;
     descripcion: string;
     porcentaje: number;
@@ -34,6 +35,8 @@ interface Configuracion {
     nombre: string;
     descripcion: string;
     detalles: Factor[];
+    salarioBase?: number;     // solo frontend
+    transportEnabled?: boolean; // solo frontend
 }
 
 interface Props {
@@ -44,13 +47,26 @@ interface Props {
     onOpenChange?: (open: boolean) => void;
 }
 
+// ---------- Constantes ----------
 const CATEGORIAS = [
-    { value: "seguridad_social", label: "Seguridad Social" },
-    { value: "prestaciones", label: "Prestaciones" },
-    { value: "parafiscales", label: "Parafiscales" },
-    { value: "otros", label: "Otros" },
+    { key: "seguridad_social", label: "Seguridad Social" },
+    { key: "prestaciones", label: "Prestaciones" },
+    { key: "parafiscales", label: "Parafiscales" },
+    { key: "otros", label: "Otros" },
 ];
 
+const CATEGORY_COLORS: Record<string, string> = {
+    seguridad_social: "bg-blue-100 text-blue-800 border-blue-300",
+    prestaciones: "bg-green-100 text-green-800 border-green-300",
+    parafiscales: "bg-amber-100 text-amber-800 border-amber-300",
+    otros: "bg-gray-100 text-gray-800 border-gray-300",
+};
+
+// Auxilio de transporte por defecto (se puede sobrescribir desde el padre)
+const DEFAULT_AUXILIO_TRANSPORTE = 176200;
+const DEFAULT_SALARIO_BASE = 498100;
+
+// ---------- Componente principal ----------
 export function ConfiguracionPrestacionesDialog({
     onConfiguracionSaved,
     configuracionEditar,
@@ -61,65 +77,165 @@ export function ConfiguracionPrestacionesDialog({
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [configuracion, setConfiguracion] = useState<Configuracion>({
+
+    // Estado de la configuración (incluye campos de frontend)
+    const [config, setConfig] = useState<Configuracion>({
         nombre: "",
         descripcion: "",
         detalles: [],
+        salarioBase: DEFAULT_SALARIO_BASE,
+        transportEnabled: true,
     });
 
+    // Estados auxiliares para la UI
+    const [editingName, setEditingName] = useState(false);
+    const [tempName, setTempName] = useState("");
+    const [editingFactorId, setEditingFactorId] = useState<number | null>(null);
+    const [tempPercentage, setTempPercentage] = useState("");
+    const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
+        seguridad_social: true,
+        prestaciones: true,
+        parafiscales: true,
+        otros: true,
+    });
+    const [showAddFactor, setShowAddFactor] = useState(false);
+    const [newFactorName, setNewFactorName] = useState("");
+    const [newFactorCategory, setNewFactorCategory] = useState<string>("otros");
+    const [newFactorPct, setNewFactorPct] = useState("");
+    const [newFactorDesc, setNewFactorDesc] = useState("");
+
+    // Control de apertura/cierre
     const isOpen = controlledOpen !== undefined ? controlledOpen : open;
     const setIsOpen = controlledOnOpenChange || setOpen;
 
+    // Al editar una configuración existente, cargar datos
     useEffect(() => {
         if (configuracionEditar) {
-            setConfiguracion({
-                nombre: configuracionEditar.nombre,
-                descripcion: configuracionEditar.descripcion || "",
-                detalles: configuracionEditar.detalles.map((d) => ({ ...d })),
+            setConfig({
+                ...configuracionEditar,
+                salarioBase: DEFAULT_SALARIO_BASE,
+                transportEnabled: true,
+            });
+            setEditingName(false);
+            setTempName(configuracionEditar.nombre);
+            setEditingFactorId(null);
+            setShowAddFactor(false);
+            // Expandir todas las categorías por defecto
+            setExpandedCategories({
+                seguridad_social: true,
+                prestaciones: true,
+                parafiscales: true,
+                otros: true,
             });
             setIsOpen(true);
         }
     }, [configuracionEditar]);
 
-    const agregarFactor = () => {
-        setConfiguracion((prev) => ({
-            ...prev,
-            detalles: [
-                ...prev.detalles,
-                {
-                    categoria: "seguridad_social",
-                    nombre_factor: "",
-                    descripcion: "",
-                    porcentaje: 0,
-                    activo: true,
-                },
-            ],
-        }));
+    // Resetear al cerrar
+    const handleClose = () => {
+        setIsOpen(false);
+        setConfig({
+            nombre: "",
+            descripcion: "",
+            detalles: [],
+            salarioBase: DEFAULT_SALARIO_BASE,
+            transportEnabled: true,
+        });
+        setEditingName(false);
+        setEditingFactorId(null);
+        setShowAddFactor(false);
+        setNewFactorName("");
+        setNewFactorCategory("otros");
+        setNewFactorPct("");
+        setNewFactorDesc("");
     };
 
-    const eliminarFactor = (index: number) => {
-        setConfiguracion((prev) => ({
+    // ---------- Acciones sobre factores ----------
+    const toggleFactor = (factorId: number) => {
+        setConfig((prev) => ({
             ...prev,
-            detalles: prev.detalles.filter((_, i) => i !== index),
-        }));
-    };
-
-    const actualizarFactor = (index: number, field: keyof Factor, value: any) => {
-        setConfiguracion((prev) => ({
-            ...prev,
-            detalles: prev.detalles.map((f, i) =>
-                i === index ? { ...f, [field]: value } : f
+            detalles: prev.detalles.map((f) =>
+                f.id === factorId ? { ...f, activo: !f.activo } : f
             ),
         }));
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!configuracion.nombre.trim()) {
+    const toggleCategory = (catKey: string) => {
+        setExpandedCategories((prev) => ({
+            ...prev,
+            [catKey]: !prev[catKey],
+        }));
+    };
+
+    const startEditFactor = (factor: Factor) => {
+        setEditingFactorId(factor.id || 0);
+        setTempPercentage(factor.porcentaje.toString());
+    };
+
+    const saveFactorEdit = (factorId: number) => {
+        const pct = parseFloat(tempPercentage);
+        if (isNaN(pct) || pct < 0) return;
+        setConfig((prev) => ({
+            ...prev,
+            detalles: prev.detalles.map((f) =>
+                f.id === factorId ? { ...f, porcentaje: pct } : f
+            ),
+        }));
+        setEditingFactorId(null);
+    };
+
+    const deleteFactor = (factorId: number) => {
+        setConfig((prev) => ({
+            ...prev,
+            detalles: prev.detalles.filter((f) => f.id !== factorId),
+        }));
+    };
+
+    const addFactor = () => {
+        if (!newFactorName.trim() || !newFactorPct) return;
+        const pct = parseFloat(newFactorPct);
+        if (isNaN(pct)) return;
+        const newFactor: Factor = {
+            nombre_factor: newFactorName.trim(),
+            categoria: newFactorCategory,
+            descripcion: newFactorDesc.trim() || "",
+            porcentaje: pct,
+            activo: true,
+        };
+        setConfig((prev) => ({
+            ...prev,
+            detalles: [...prev.detalles, newFactor],
+        }));
+        setNewFactorName("");
+        setNewFactorCategory("otros");
+        setNewFactorPct("");
+        setNewFactorDesc("");
+        setShowAddFactor(false);
+    };
+
+    // ---------- Calcular totales ----------
+    const totalSelected = config.detalles
+        .filter((f) => f.activo)
+        .reduce((sum, f) => sum + f.porcentaje, 0);
+
+    const auxilioTransporte = 176200; // podrías recibirlo por props si quieres
+
+    // Calcular % de transporte basado en salario base
+    const transportPercentage =
+        config.salarioBase && config.salarioBase > 0
+            ? (auxilioTransporte / config.salarioBase) * 100
+            : 0;
+
+    const totalWithTransport =
+        config.transportEnabled ? totalSelected + transportPercentage : totalSelected;
+
+    // ---------- Guardar ----------
+    const handleSubmit = async () => {
+        if (!config.nombre.trim()) {
             toast({ variant: "destructive", title: "Error", description: "El nombre es requerido" });
             return;
         }
-        if (configuracion.detalles.length === 0) {
+        if (config.detalles.length === 0) {
             toast({ variant: "destructive", title: "Error", description: "Agrega al menos un factor" });
             return;
         }
@@ -127,9 +243,9 @@ export function ConfiguracionPrestacionesDialog({
         setLoading(true);
         try {
             const payload = {
-                nombre: configuracion.nombre,
-                descripcion: configuracion.descripcion,
-                detalles: configuracion.detalles.map((d) => ({
+                nombre: config.nombre.trim(),
+                descripcion: config.descripcion || "",
+                detalles: config.detalles.map((d) => ({
                     id: d.id,
                     categoria: d.categoria,
                     nombre_factor: d.nombre_factor,
@@ -140,8 +256,8 @@ export function ConfiguracionPrestacionesDialog({
             };
 
             let response;
-            if (configuracion.id) {
-                response = await apiClient.put(`/configuraciones-prestaciones/${configuracion.id}`, payload);
+            if (config.id) {
+                response = await apiClient.put(`/configuraciones-prestaciones/${config.id}`, payload);
             } else {
                 response = await apiClient.post("/configuraciones-prestaciones", payload);
             }
@@ -150,150 +266,391 @@ export function ConfiguracionPrestacionesDialog({
                 toast({
                     variant: "success",
                     title: "Configuración guardada",
-                    description: `La configuración "${configuracion.nombre}" fue ${configuracion.id ? 'actualizada' : 'creada'} correctamente.`,
+                    description: `"${config.nombre}" fue ${config.id ? "actualizada" : "creada"} correctamente.`,
                 });
                 if (onConfiguracionSaved) onConfiguracionSaved();
                 handleClose();
             }
         } catch (error) {
-            toast({ variant: "destructive", title: "Error", description: "Error al guardar configuración" });
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Error al guardar configuración",
+            });
         } finally {
             setLoading(false);
         }
     };
 
-    const handleClose = () => {
-        setIsOpen(false);
-        setConfiguracion({ nombre: "", descripcion: "", detalles: [] });
-    };
-
-    const totalPrestaciones = calcularTotalPrestaciones(configuracion);
-
+    // ---------- Renderizado ----------
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
             {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle className="text-green-900">
-                        {configuracion.id ? `Editar Configuración: ${configuracion.nombre}` : "Nueva Configuración de Prestaciones"}
+                    <DialogTitle className="text-green-900 text-xl">
+                        {config.id ? `Editar Configuración: ${config.nombre}` : "Nueva Configuración de Prestaciones"}
                     </DialogTitle>
-                    <DialogDescription>
-                        Configura los factores de prestaciones sociales y parafiscales para cada rango salarial.
-                        Puedes activar o desactivar cada factor según tu necesidad.
+                    <DialogDescription className="text-green-700">
+                        Configura los factores de prestaciones sociales y parafiscales. Todos los factores pueden ser activados o desactivados según tu necesidad.
                     </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <Label>Nombre de la Configuración *</Label>
-                            <Input
-                                value={configuracion.nombre}
-                                onChange={(e) => setConfiguracion((p) => ({ ...p, nombre: e.target.value }))}
-                                placeholder="Ej: Prestaciones Estándar"
-                                required
-                            />
+                {/* --- Panel de la configuración --- */}
+                <div className="border border-green-200 rounded-xl bg-white overflow-hidden">
+                    {/* Header con nombre editable y totales */}
+                    <div className="flex items-center justify-between bg-green-50 px-4 py-3 border-b border-green-200">
+                        <div className="flex items-center gap-2 flex-1">
+                            {editingName ? (
+                                <div className="flex items-center gap-2 flex-1">
+                                    <Input
+                                        value={tempName}
+                                        onChange={(e) => setTempName(e.target.value)}
+                                        className="h-7 text-sm border-green-300 focus:border-green-500 max-w-xs"
+                                        autoFocus
+                                    />
+                                    <Button
+                                        size="icon"
+                                        className="h-6 w-6 bg-green-600 hover:bg-green-700"
+                                        onClick={() => {
+                                            setConfig((prev) => ({ ...prev, nombre: tempName.trim() }));
+                                            setEditingName(false);
+                                        }}
+                                    >
+                                        <Check className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6"
+                                        onClick={() => {
+                                            setTempName(config.nombre);
+                                            setEditingName(false);
+                                        }}
+                                    >
+                                        <X className="h-3 w-3" />
+                                    </Button>
+                                </div>
+                            ) : (
+                                <>
+                                    <span className="font-semibold text-green-900">{config.nombre}</span>
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6 text-green-600 hover:text-green-900"
+                                        onClick={() => {
+                                            setEditingName(true);
+                                            setTempName(config.nombre);
+                                        }}
+                                    >
+                                        <Edit2 className="h-3 w-3" />
+                                    </Button>
+                                </>
+                            )}
                         </div>
-                        <div>
-                            <Label>Descripción</Label>
-                            <Input
-                                value={configuracion.descripcion}
-                                onChange={(e) => setConfiguracion((p) => ({ ...p, descripcion: e.target.value }))}
-                                placeholder="Descripción opcional"
-                            />
+                        <div className="flex items-center gap-3">
+                            <div className="text-right">
+                                <div className="text-xs text-green-600">Total seleccionado</div>
+                                <div className="text-lg font-bold text-green-700">
+                                    {totalSelected.toFixed(2)}%
+                                </div>
+                            </div>
+                            <div className="text-right border-l border-green-300 pl-3">
+                                <div className="text-xs text-green-600">+ Transporte</div>
+                                <div className="text-lg font-bold text-green-900">
+                                    {totalWithTransport.toFixed(2)}%
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                        <Label className="text-base font-semibold">Factores</Label>
-                        <Button type="button" variant="outline" size="sm" onClick={agregarFactor}>
-                            <Plus className="h-4 w-4 mr-1" /> Agregar Factor
-                        </Button>
+                    {/* Sección de Transporte */}
+                    <div className="px-4 py-3 border-b border-green-100 bg-green-50/50">
+                        <div className="flex items-center gap-4">
+                            <input
+                                type="checkbox"
+                                checked={config.transportEnabled}
+                                onChange={(e) =>
+                                    setConfig((prev) => ({ ...prev, transportEnabled: e.target.checked }))
+                                }
+                                className="w-4 h-4 accent-green-600 cursor-pointer"
+                            />
+                            <div className="flex-1">
+                                <Label className="text-green-800 text-sm font-medium">Auxilio de Transporte</Label>
+                                <div className="flex items-center gap-4 mt-1">
+                                    <div className="text-sm text-green-600">
+                                        Valor:{" "}
+                                        <span className="font-semibold text-green-800">
+                                            ${auxilioTransporte.toLocaleString("es-CO")}
+                                        </span>
+                                    </div>
+                                    <div className="text-sm text-green-600">
+                                        Equivale a:{" "}
+                                        <span className="font-semibold text-green-800">
+                                            {transportPercentage.toFixed(2)}%
+                                        </span>{" "}
+                                        del salario base
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3 mt-2 pl-8">
+                            <Label className="text-green-700 text-xs whitespace-nowrap">
+                                Salario base para cálculo:
+                            </Label>
+                            <Input
+                                type="number"
+                                value={config.salarioBase}
+                                onChange={(e) =>
+                                    setConfig((prev) => ({
+                                        ...prev,
+                                        salarioBase: parseFloat(e.target.value) || DEFAULT_SALARIO_BASE,
+                                    }))
+                                }
+                                className="h-7 w-32 text-sm border-green-300 focus:border-green-500"
+                            />
+                            <span className="text-xs text-green-500">
+                                (El % de transporte se calcula: Auxilio / Salario Base)
+                            </span>
+                        </div>
                     </div>
 
-                    {configuracion.detalles.map((factor, index) => (
-                        <div key={index} className="border border-green-200 rounded-lg p-4 bg-green-50/50">
-                            <div className="flex items-start gap-3">
-                                <div className="flex-1 grid grid-cols-3 gap-2">
+                    {/* Factores agrupados por categoría */}
+                    <div className="divide-y divide-green-100">
+                        {CATEGORIAS.map((cat) => {
+                            const catFactors = config.detalles.filter((f) => f.categoria === cat.key);
+                            if (catFactors.length === 0) return null;
+                            const isExpanded = expandedCategories[cat.key];
+                            const catTotal = catFactors
+                                .filter((f) => f.activo)
+                                .reduce((s, f) => s + f.porcentaje, 0);
+
+                            return (
+                                <div key={cat.key}>
+                                    <button
+                                        type="button"
+                                        className="w-full flex items-center justify-between px-4 py-2 bg-gray-50 hover:bg-gray-100 text-left"
+                                        onClick={() => toggleCategory(cat.key)}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            {isExpanded ? (
+                                                <ChevronDown className="h-3 w-3 text-gray-500" />
+                                            ) : (
+                                                <ChevronRight className="h-3 w-3 text-gray-500" />
+                                            )}
+                                            <Badge className={`text-xs ${CATEGORY_COLORS[cat.key]}`} variant="outline">
+                                                {cat.label}
+                                            </Badge>
+                                            <span className="text-xs text-gray-500">
+                                                ({catFactors.length} factores)
+                                            </span>
+                                        </div>
+                                        <span className="text-xs font-semibold text-gray-700">
+                                            {catTotal.toFixed(2)}%
+                                        </span>
+                                    </button>
+
+                                    {isExpanded && (
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow className="bg-gray-50/50">
+                                                    <TableHead className="text-xs text-gray-600 w-8 pl-6">Sel.</TableHead>
+                                                    <TableHead className="text-xs text-gray-600">Factor</TableHead>
+                                                    <TableHead className="text-xs text-gray-600">Descripción</TableHead>
+                                                    <TableHead className="text-xs text-gray-600 text-right">%</TableHead>
+                                                    <TableHead className="text-xs text-gray-600 w-16 text-center">
+                                                        Acción
+                                                    </TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {catFactors.map((factor) => {
+                                                    const isSelected = factor.activo;
+                                                    const isEditing = editingFactorId === factor.id;
+                                                    return (
+                                                        <TableRow
+                                                            key={factor.id || `new-${Math.random()}`}
+                                                            className={`${isSelected ? "bg-white" : "bg-gray-50 opacity-60"} hover:opacity-100`}
+                                                        >
+                                                            <TableCell className="pl-6">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isSelected}
+                                                                    onChange={() => toggleFactor(factor.id || 0)}
+                                                                    className="w-4 h-4 accent-green-600 cursor-pointer"
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell className="text-sm font-medium text-gray-900">
+                                                                {factor.nombre_factor}
+                                                            </TableCell>
+                                                            <TableCell className="text-xs text-gray-500">
+                                                                {factor.descripcion || "—"}
+                                                            </TableCell>
+                                                            <TableCell className="text-right font-semibold text-green-800">
+                                                                {isEditing ? (
+                                                                    <div className="flex items-center gap-1 justify-end">
+                                                                        <Input
+                                                                            type="number"
+                                                                            step="0.01"
+                                                                            value={tempPercentage}
+                                                                            onChange={(e) => setTempPercentage(e.target.value)}
+                                                                            className="h-6 w-20 text-xs border-green-300"
+                                                                            autoFocus
+                                                                        />
+                                                                        <Button
+                                                                            size="icon"
+                                                                            className="h-5 w-5 bg-green-600 hover:bg-green-700"
+                                                                            onClick={() => saveFactorEdit(factor.id || 0)}
+                                                                        >
+                                                                            <Check className="h-3 w-3" />
+                                                                        </Button>
+                                                                        <Button
+                                                                            size="icon"
+                                                                            variant="ghost"
+                                                                            className="h-5 w-5"
+                                                                            onClick={() => setEditingFactorId(null)}
+                                                                        >
+                                                                            <X className="h-3 w-3" />
+                                                                        </Button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <span>{factor.porcentaje.toFixed(2)}%</span>
+                                                                )}
+                                                            </TableCell>
+                                                            <TableCell className="text-center">
+                                                                <div className="flex items-center justify-center gap-1">
+                                                                    {!isEditing && (
+                                                                        <Button
+                                                                            size="icon"
+                                                                            variant="ghost"
+                                                                            className="h-6 w-6 text-blue-600 hover:text-blue-800"
+                                                                            onClick={() => startEditFactor(factor)}
+                                                                        >
+                                                                            <Edit2 className="h-3 w-3" />
+                                                                        </Button>
+                                                                    )}
+                                                                    <Button
+                                                                        size="icon"
+                                                                        variant="ghost"
+                                                                        className="h-6 w-6 text-red-500 hover:text-red-700"
+                                                                        onClick={() => deleteFactor(factor.id || 0)}
+                                                                    >
+                                                                        <Trash2 className="h-3 w-3" />
+                                                                    </Button>
+                                                                </div>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    );
+                                                })}
+                                            </TableBody>
+                                        </Table>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Botón Agregar Factor */}
+                    <div className="border-t border-green-200 px-4 py-3 bg-green-50/30">
+                        {showAddFactor ? (
+                            <div className="space-y-2">
+                                <div className="grid grid-cols-2 gap-2">
                                     <div>
-                                        <Label className="text-xs">Categoría</Label>
+                                        <Label className="text-xs text-green-800">Nombre del Factor</Label>
+                                        <Input
+                                            value={newFactorName}
+                                            onChange={(e) => setNewFactorName(e.target.value)}
+                                            className="h-7 text-sm border-green-300"
+                                            placeholder="Ej: Fondo Mutual"
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs text-green-800">Categoría</Label>
                                         <select
-                                            className="w-full rounded border border-green-200 p-1 text-sm"
-                                            value={factor.categoria}
-                                            onChange={(e) => actualizarFactor(index, "categoria", e.target.value)}
+                                            value={newFactorCategory}
+                                            onChange={(e) => setNewFactorCategory(e.target.value)}
+                                            className="h-7 w-full text-sm border border-green-300 rounded px-2 focus:outline-none focus:border-green-500 bg-white"
                                         >
-                                            {CATEGORIAS.map((cat) => (
-                                                <option key={cat.value} value={cat.value}>{cat.label}</option>
+                                            {CATEGORIAS.map((c) => (
+                                                <option key={c.key} value={c.key}>
+                                                    {c.label}
+                                                </option>
                                             ))}
                                         </select>
                                     </div>
                                     <div>
-                                        <Label className="text-xs">Factor</Label>
-                                        <Input
-                                            className="h-8 text-sm"
-                                            value={factor.nombre_factor}
-                                            onChange={(e) => actualizarFactor(index, "nombre_factor", e.target.value)}
-                                            placeholder="Ej: Pensión"
-                                        />
-                                    </div>
-                                    <div>
-                                        <Label className="text-xs">Descripción</Label>
-                                        <Input
-                                            className="h-8 text-sm"
-                                            value={factor.descripcion}
-                                            onChange={(e) => actualizarFactor(index, "descripcion", e.target.value)}
-                                            placeholder="Aporte patronal"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-20">
-                                        <Label className="text-xs">%</Label>
+                                        <Label className="text-xs text-green-800">Porcentaje (%)</Label>
                                         <Input
                                             type="number"
                                             step="0.01"
-                                            className="h-8 text-sm"
-                                            value={factor.porcentaje}
-                                            onChange={(e) => actualizarFactor(index, "porcentaje", Number(e.target.value))}
+                                            value={newFactorPct}
+                                            onChange={(e) => setNewFactorPct(e.target.value)}
+                                            className="h-7 text-sm border-green-300"
+                                            placeholder="0.00"
                                         />
                                     </div>
-                                    <div className="flex items-center gap-1">
-                                        <Label className="text-xs">Activo</Label>
-                                        <Switch
-                                            checked={factor.activo}
-                                            onCheckedChange={(checked) => actualizarFactor(index, "activo", checked)}
+                                    <div>
+                                        <Label className="text-xs text-green-800">Descripción (opcional)</Label>
+                                        <Input
+                                            value={newFactorDesc}
+                                            onChange={(e) => setNewFactorDesc(e.target.value)}
+                                            className="h-7 text-sm border-green-300"
+                                            placeholder="Descripción del factor"
                                         />
                                     </div>
+                                </div>
+                                <div className="flex gap-2">
                                     <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 text-red-600 hover:text-red-800"
-                                        onClick={() => eliminarFactor(index)}
+                                        size="sm"
+                                        className="bg-green-600 hover:bg-green-700 text-white h-7 text-xs"
+                                        onClick={addFactor}
                                     >
-                                        <Trash2 className="h-4 w-4" />
+                                        <Check className="h-3 w-3 mr-1" />
+                                        Guardar Factor
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-7 text-xs border-green-300 text-green-700"
+                                        onClick={() => setShowAddFactor(false)}
+                                    >
+                                        Cancelar
                                     </Button>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        ) : (
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-green-300 text-green-700 hover:bg-green-50 h-7 text-xs"
+                                onClick={() => setShowAddFactor(true)}
+                            >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Agregar Factor
+                            </Button>
+                        )}
+                    </div>
+                </div>
 
-                    {configuracion.detalles.length > 0 && (
-                        <div className="bg-green-100 border border-green-300 rounded p-3 text-sm">
-                            <p className="font-semibold">Total seleccionado: <span className="text-green-800">{totalPrestaciones.toFixed(2)}%</span></p>
-                            <p className="text-xs text-green-600">* Solo se suman los factores activos</p>
-                        </div>
-                    )}
-
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={handleClose}>
-                            Cancelar
-                        </Button>
-                        <Button type="submit" disabled={loading} className="bg-green-600 hover:bg-green-700">
-                            {loading ? "Guardando..." : "Guardar Configuración"}
-                        </Button>
-                    </DialogFooter>
-                </form>
+                {/* Footer con botones */}
+                <DialogFooter className="mt-4">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleClose}
+                        className="border-green-300 text-green-700 hover:bg-green-50"
+                    >
+                        Cancelar
+                    </Button>
+                    <Button
+                        type="button"
+                        onClick={handleSubmit}
+                        disabled={loading}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                        {loading ? "Guardando..." : config.id ? "Actualizar Configuración" : "Crear Configuración"}
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );
