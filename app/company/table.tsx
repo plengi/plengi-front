@@ -91,7 +91,7 @@ export default function TableEmpresas({ empresas, setEmpresas }: TablaEmpresasPr
 
             if (response.data.empresa) {
                 window.location.href = '/dashboard';
-            }            
+            }
             
         } catch (error) {
             console.error('Error al conectar:', error);

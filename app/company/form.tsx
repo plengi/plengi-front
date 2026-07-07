@@ -95,43 +95,59 @@ export default function CompanyForm({ setEmpresas, empresaEditar, setEmpresaEdit
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setError('');
-    
-        if (!validateForm()) {
-            setLoading(false);
-            return;
-        };
+  e.preventDefault();
+  setLoading(true);
+  setError('');
 
-        try {
-            const method = formData.id ? 'put' : 'post';
-            const endpoint = '/empresas';
-            const action = formData.id ? 'actualizada' : 'creada';
+  if (!validateForm()) {
+    setLoading(false);
+    return;
+  }
 
-            const response = await apiClient[method](endpoint, formData);
-            const responseData = response.data;
+  try {
+    const method = formData.id ? 'put' : 'post';
+    const endpoint = '/empresas';
+    const action = formData.id ? 'actualizada' : 'creada';
 
-            if (response.data.success) {
-                setEmpresas(prev => [responseData.data, ...prev]);
-                toast({
-                    variant: "success",
-                    title: `Empresa ${action}`,
-                    description: `La empresa ha sido ${action} correctamente.`,
-                });
+    const response = await apiClient[method](endpoint, formData);
+    const responseData = response.data;
+
+    if (response.data.success) {
+        const updatedEmpresa = responseData.data;
+
+        setEmpresas(prev => {
+            if (method === 'put') {
+                return prev.map(emp => emp.id === updatedEmpresa.id ? updatedEmpresa : emp);
+            } else {
+                return [updatedEmpresa, ...prev];
             }
+        });
 
-            handleClose();
-        } catch (err) {
-            toast({
-                variant: "destructive",
-                title: "Error Empresa",
-                description: "Error al crear empresa.",
-            });
-        } finally {
-            setLoading(false);
+        if (method === 'post') {
+            localStorage.setItem('empresaSeleccionada', JSON.stringify(updatedEmpresa));
+            if (updatedEmpresa) {
+            window.location.href = '/dashboard';
+            }
         }
+
+        toast({
+            variant: "success",
+            title: `Empresa ${action}`,
+            description: `La empresa ha sido ${action} correctamente.`,
+        });
+        }
+
+        handleClose();
+    } catch (err) {
+        toast({
+            variant: "destructive",
+            title: "Error Empresa",
+            description: "Error al guardar la empresa.",
+        });
+    } finally {
+        setLoading(false);
     }
+    };
 
     const validateForm = () => {
         const newErrors: Record<string, string> = {};
@@ -147,12 +163,12 @@ export default function CompanyForm({ setEmpresas, empresaEditar, setEmpresaEdit
     const handleClose = () => {
         setOpen(false);
         setFormData({
-        id: 0,
-        razon_social: "",
-        email: "",
-        telefono: "",
-        direccion: "",
-        nit: "",
+            id: 0,
+            razon_social: "",
+            email: "",
+            telefono: "",
+            direccion: "",
+            nit: "",
         });
         if (setEmpresaEditar) setEmpresaEditar(null);
     };    

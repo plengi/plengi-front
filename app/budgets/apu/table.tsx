@@ -155,7 +155,6 @@ export default function TableApus({ apus, setApus }: TablaApusProps) {
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-green-50">
-                                    <TableHead className="text-green-800">Código</TableHead>
                                     <TableHead className="text-green-800">Actividad</TableHead>
                                     <TableHead className="text-green-800">Unidad</TableHead>
                                     <TableHead className="text-green-800">Precio Unitario</TableHead>
@@ -179,7 +178,6 @@ export default function TableApus({ apus, setApus }: TablaApusProps) {
                                 ) : (
                                     apus.map((apu) => (
                                         <TableRow key={apu.id} className="hover:bg-green-50/50">
-                                            <TableCell className="font-medium text-green-900">{apu.codigo}</TableCell>
                                             <TableCell>
                                                 <div className="space-y-1">
                                                     <div className="font-medium text-green-900">{apu.nombre}</div>

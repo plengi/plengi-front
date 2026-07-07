@@ -17,7 +17,3 @@ export default function EditAPUPage() {
         </>
     );
 }
-
-export function generateStaticParams() {
-  return []; 
-}

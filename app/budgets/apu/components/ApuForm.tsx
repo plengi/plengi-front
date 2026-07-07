@@ -63,7 +63,7 @@ export interface ApuFormData {
     unit: string;
     unitPrice: number;
     tipo_actividad: string;
-    code: string;
+    code?: string;
     description: string;
 }
 
@@ -329,7 +329,6 @@ export default function ApuForm({ mode, apuId, onSuccess }: ApuFormProps) {
 
     const validateForm = () => {
         const newErrors: Record<string, string> = {};
-        if (!formData.code) newErrors.code = "Requerido";
         if (!formData.tipo_actividad) newErrors.tipo_actividad = "Requerido";
         if (!formData.name) newErrors.name = "Requerido";
         if (!formData.unit) newErrors.unit = "Requerido";
@@ -532,7 +531,7 @@ export default function ApuForm({ mode, apuId, onSuccess }: ApuFormProps) {
                 <CardContent>
                     <form id="apu-form" onSubmit={handleSubmit} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
+                            {/* <div className="space-y-2">
                                 <Label htmlFor="apu-code" className="text-green-800">
                                     Código APU *
                                 </Label>
@@ -545,6 +544,21 @@ export default function ApuForm({ mode, apuId, onSuccess }: ApuFormProps) {
                                     required
                                 />
                                 {errors.code && <p className="text-red-500 text-sm">{errors.code}</p>}
+                            </div> */}
+
+                            <div className="space-y-2">
+                                <Label htmlFor="apu-name" className="text-green-800">
+                                    Nombre de la Actividad *
+                                </Label>
+                                <Input
+                                    id="apu-name"
+                                    placeholder="Ej: Excavación Manual en Tierra"
+                                    value={formData.name}
+                                    onChange={(e) => handleInputChange("name", e.target.value)}
+                                    className="border-green-200 focus:border-green-400 focus:ring-green-400"
+                                    required
+                                />
+                                {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
                             </div>
 
                             <div className="space-y-2">
@@ -569,21 +583,6 @@ export default function ApuForm({ mode, apuId, onSuccess }: ApuFormProps) {
                                 </Select>
                                 {errors.tipo_actividad && <p className="text-red-500 text-sm">{errors.tipo_actividad}</p>}
                             </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="apu-name" className="text-green-800">
-                                Nombre de la Actividad *
-                            </Label>
-                            <Input
-                                id="apu-name"
-                                placeholder="Ej: Excavación Manual en Tierra"
-                                value={formData.name}
-                                onChange={(e) => handleInputChange("name", e.target.value)}
-                                className="border-green-200 focus:border-green-400 focus:ring-green-400"
-                                required
-                            />
-                            {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -795,12 +794,12 @@ export default function ApuForm({ mode, apuId, onSuccess }: ApuFormProps) {
                                                                 <TableCell>{formatPrice(insumo.unitPrice)}</TableCell>
                                                                 <TableCell>
                                                                     <Input
-                                                                        type="number"
+                                                                        type="text"
                                                                         min="0.01"
                                                                         step="0.01"
                                                                         value={insumo.quantity}
                                                                         onChange={(e) =>
-                                                                            updateInsumoField(globalIndex, "quantity", Number.parseFloat(e.target.value) || 0)
+                                                                            updateInsumoField(globalIndex, "quantity", e.target.value || 0)
                                                                         }
                                                                         className="w-20 h-8 text-sm border-green-200"
                                                                     />
@@ -808,7 +807,7 @@ export default function ApuForm({ mode, apuId, onSuccess }: ApuFormProps) {
                                                                 {category === "materials" && (
                                                                     <TableCell>
                                                                         <Input
-                                                                            type="number"
+                                                                            type="text"
                                                                             min="0"
                                                                             max="100"
                                                                             step="0.1"
@@ -817,7 +816,7 @@ export default function ApuForm({ mode, apuId, onSuccess }: ApuFormProps) {
                                                                                 updateInsumoField(
                                                                                     globalIndex,
                                                                                     "wastePercentage",
-                                                                                    Number.parseFloat(e.target.value) || 0,
+                                                                                    e.target.value || 0,
                                                                                 )
                                                                             }
                                                                             className="w-20 h-8 text-sm border-green-200"
@@ -828,7 +827,7 @@ export default function ApuForm({ mode, apuId, onSuccess }: ApuFormProps) {
                                                                 {(category === "labor" || category === "equipment") && (
                                                                     <TableCell>
                                                                         <Input
-                                                                            type="number"
+                                                                            type="text"
                                                                             min="0.01"
                                                                             step="0.01"
                                                                             value={insumo.performance || 1}
@@ -836,7 +835,7 @@ export default function ApuForm({ mode, apuId, onSuccess }: ApuFormProps) {
                                                                                 updateInsumoField(
                                                                                     globalIndex,
                                                                                     "performance",
-                                                                                    Number.parseFloat(e.target.value) || 1,
+                                                                                    e.target.value || 1,
                                                                                 )
                                                                             }
                                                                             className="w-20 h-8 text-sm border-green-200"
