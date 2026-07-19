@@ -206,6 +206,7 @@ export default function ApuForm({ mode, apuId, onSuccess }: ApuFormProps) {
             const response = await apiClient.get<ApiResponse>(`/productos`, {
                 params: {
                     tipo_producto: tipoProducto,
+                    duplicados: false,
                     search: searchTerm,
                     start: pagination.start,
                     length: pagination.length,

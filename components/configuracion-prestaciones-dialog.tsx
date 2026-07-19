@@ -9,12 +9,11 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog";
+} from "@/components/ui/dialog";  // ← quitamos DialogTrigger
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Edit2, Check, X, ChevronDown, ChevronRight, Settings2 } from "lucide-react";
+import { Plus, Trash2, Edit2, Check, X, ChevronDown, ChevronRight } from "lucide-react"; // quitamos Settings2
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import apiClient from "@/app/api/apiClient";
@@ -42,7 +41,6 @@ interface Configuracion {
 interface Props {
     onConfiguracionSaved?: () => void;
     configuracionEditar?: Configuracion | null;
-    trigger?: React.ReactNode;
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
 }
@@ -62,23 +60,19 @@ const CATEGORY_COLORS: Record<string, string> = {
     otros: "bg-gray-100 text-gray-800 border-gray-300",
 };
 
-// Auxilio de transporte por defecto (se puede sobrescribir desde el padre)
 const DEFAULT_AUXILIO_TRANSPORTE = 176200;
 const DEFAULT_SALARIO_BASE = 498100;
 
-// ---------- Componente principal ----------
 export function ConfiguracionPrestacionesDialog({
     onConfiguracionSaved,
     configuracionEditar,
-    trigger,
     open: controlledOpen,
     onOpenChange: controlledOnOpenChange,
 }: Props) {
     const { toast } = useToast();
-    const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    // Estado de la configuración (incluye campos de frontend)
+    // Estado interno
     const [config, setConfig] = useState<Configuracion>({
         nombre: "",
         descripcion: "",
@@ -87,7 +81,7 @@ export function ConfiguracionPrestacionesDialog({
         transportEnabled: true,
     });
 
-    // Estados auxiliares para la UI
+    // Estados auxiliares
     const [editingName, setEditingName] = useState(false);
     const [tempName, setTempName] = useState("");
     const [editingFactorId, setEditingFactorId] = useState<number | null>(null);
@@ -104,15 +98,22 @@ export function ConfiguracionPrestacionesDialog({
     const [newFactorPct, setNewFactorPct] = useState("");
     const [newFactorDesc, setNewFactorDesc] = useState("");
 
-    // Control de apertura/cierre
-    const isOpen = controlledOpen !== undefined ? controlledOpen : open;
-    const setIsOpen = controlledOnOpenChange || setOpen;
+    // Control de apertura
+    const isOpen = controlledOpen ?? false;
+    const setIsOpen = controlledOnOpenChange || (() => { });
 
-    // Al editar una configuración existente, cargar datos
+    // Al editar una configuración existente, cargar datos (pero NO abrir el diálogo manualmente)
     useEffect(() => {
         if (configuracionEditar) {
+            // Normalizar datos para evitar errores de tipo
+            const detallesNormalizados = configuracionEditar.detalles.map((d) => ({
+                ...d,
+                porcentaje: Number(d.porcentaje) || 0,
+                activo: Boolean(d.activo),
+            }));
             setConfig({
                 ...configuracionEditar,
+                detalles: detallesNormalizados,
                 salarioBase: DEFAULT_SALARIO_BASE,
                 transportEnabled: true,
             });
@@ -120,14 +121,12 @@ export function ConfiguracionPrestacionesDialog({
             setTempName(configuracionEditar.nombre);
             setEditingFactorId(null);
             setShowAddFactor(false);
-            // Expandir todas las categorías por defecto
             setExpandedCategories({
                 seguridad_social: true,
                 prestaciones: true,
                 parafiscales: true,
                 otros: true,
             });
-            setIsOpen(true);
         }
     }, [configuracionEditar]);
 
@@ -150,7 +149,7 @@ export function ConfiguracionPrestacionesDialog({
         setNewFactorDesc("");
     };
 
-    // ---------- Acciones sobre factores ----------
+    // ---------- Acciones sobre factores (sin cambios) ----------
     const toggleFactor = (factorId: number) => {
         setConfig((prev) => ({
             ...prev,
@@ -218,9 +217,7 @@ export function ConfiguracionPrestacionesDialog({
         .filter((f) => f.activo)
         .reduce((sum, f) => sum + f.porcentaje, 0);
 
-    const auxilioTransporte = 176200; // podrías recibirlo por props si quieres
-
-    // Calcular % de transporte basado en salario base
+    const auxilioTransporte = 176200;
     const transportPercentage =
         config.salarioBase && config.salarioBase > 0
             ? (auxilioTransporte / config.salarioBase) * 100
@@ -285,8 +282,8 @@ export function ConfiguracionPrestacionesDialog({
     // ---------- Renderizado ----------
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
-            {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
             <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                {/* (el contenido es exactamente igual al que ya tenías, solo cambiamos el wrapper) */}
                 <DialogHeader>
                     <DialogTitle className="text-green-900 text-xl">
                         {config.id ? `Editar Configuración: ${config.nombre}` : "Nueva Configuración de Prestaciones"}
@@ -298,7 +295,7 @@ export function ConfiguracionPrestacionesDialog({
 
                 {/* --- Panel de la configuración --- */}
                 <div className="border border-green-200 rounded-xl bg-white overflow-hidden">
-                    {/* Header con nombre editable y totales */}
+                    {/* Header */}
                     <div className="flex items-center justify-between bg-green-50 px-4 py-3 border-b border-green-200">
                         <div className="flex items-center gap-2 flex-1">
                             {editingName ? (
@@ -632,7 +629,7 @@ export function ConfiguracionPrestacionesDialog({
                     </div>
                 </div>
 
-                {/* Footer con botones */}
+                {/* Footer */}
                 <DialogFooter className="mt-4">
                     <Button
                         type="button"

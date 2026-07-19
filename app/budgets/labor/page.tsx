@@ -42,7 +42,6 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 import apiClient from "@/app/api/apiClient";
 import { formatCurrency } from "@/lib/format";
-import { SocialBenefitsDialog } from "@/components/social-benefits-dialog";
 import InsumoTable from "../insumos/table";
 import InsumoForm from "../insumos/form";
 import { Insumo } from '../insumos/form';
@@ -163,6 +162,20 @@ export default function LaborPage() {
         ? filteredManoObra.reduce((sum, item) => sum + item.valor, 0) / filteredManoObra.length
         : 0;
 
+    // Función para calcular total de prestaciones desde JSON
+    const calcularTotalPrestaciones = (manoObra: any) => {
+        if (!manoObra?.prestaciones) return 0;
+        let total = 0;
+        const categorias = ["seguridad_social", "prestaciones", "parafiscales", "otros"] as const;
+        categorias.forEach((cat) => {
+            const factores = manoObra.prestaciones[cat] || [];
+            factores.forEach((f: any) => {
+                if (f.activo) total += f.porcentaje;
+            });
+        });
+        return total;
+    };
+
     if (loading || loadingManoObra) {
         return <div className="p-4 text-center">Cargando Mano de Obra...</div>;
     }
@@ -198,9 +211,7 @@ export default function LaborPage() {
                         <p className="text-green-700">Gestiona el catálogo de recursos humanos para tus proyectos</p>
                     </div>
                     <div className="flex gap-2">
-                        <SocialBenefitsDialog auxilioTransporte={auxilioTransporte} />
-                        {/* Botón para crear nueva mano de obra está dentro de InsumoForm */}
-                        {/* Pero puedes añadirlo aquí si quieres un botón independiente */}
+                        {/* Eliminado SocialBenefitsDialog */}
                     </div>
                 </div>
 
@@ -435,6 +446,7 @@ export default function LaborPage() {
                             icon={<HardHat className="h-5 w-5 text-green-600" />}
                             mostrarBotonCrear={true}
                             onSuccess={fetchManoObra}
+                            config={config}
                         />
                         <NewCuadrillaDialog onCuadrillaAdded={fetchCuadrillas} />
                     </div>
@@ -452,6 +464,7 @@ export default function LaborPage() {
                     titulo="Mano de Obra"
                     descripcion="Lista completa de recursos humanos disponibles para presupuestos"
                     icon={<HardHat className="h-4 w-4" />}
+                    config={config}
                 />
 
                 {/* Sección de Cuadrillas */}
@@ -491,11 +504,7 @@ export default function LaborPage() {
                                                 const labor = manoObra.find((p) => p.id === detalle.id_producto);
                                                 if (labor && labor.mano_obra && config) {
                                                     const jornal = labor.mano_obra.salario_base / config.dias_laborales_mes;
-                                                    const totalPrestaciones = labor.mano_obra.configuracion_prestaciones?.detalles
-                                                        ? labor.mano_obra.configuracion_prestaciones.detalles
-                                                            .filter((d: any) => d.activo)
-                                                            .reduce((sum: number, d: any) => sum + Number(d.porcentaje), 0)
-                                                        : 0;
+                                                    const totalPrestaciones = calcularTotalPrestaciones(labor.mano_obra);
                                                     const jornalWithBenefits = jornal * (1 + totalPrestaciones / 100);
                                                     totalJornalSinPrestaciones += jornal * detalle.cantidad;
                                                     totalJornalConPrestaciones += jornalWithBenefits * detalle.cantidad;

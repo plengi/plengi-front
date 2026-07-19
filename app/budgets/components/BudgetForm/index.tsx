@@ -429,7 +429,6 @@ export default function BudgetForm({
     const filteredAPUs = availableAPUs.filter(
         (apu) =>
             apu.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            apu.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
             apu.tipo_actividad.toLowerCase().includes(searchTerm.toLowerCase()),
     )
 

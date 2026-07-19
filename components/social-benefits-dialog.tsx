@@ -11,7 +11,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Calculator, Plus, Edit, Trash2, Eye } from "lucide-react";
+import { Calculator, Plus, Edit, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import apiClient from "@/app/api/apiClient";
 import { ConfiguracionPrestacionesDialog } from "./configuracion-prestaciones-dialog";
@@ -61,6 +61,10 @@ export function SocialBenefitsDialog({ auxilioTransporte }: Props) {
         }
     };
 
+    const handleEditar = (config: any) => {
+        setEditar(config);
+    };
+
     return (
         <>
             <Dialog open={open} onOpenChange={setOpen}>
@@ -85,21 +89,22 @@ export function SocialBenefitsDialog({ auxilioTransporte }: Props) {
                         <div className="text-sm text-green-700">
                             {configuraciones.length} configuraciones disponibles
                         </div>
-                        <ConfiguracionPrestacionesDialog
-                            onConfiguracionSaved={fetchConfiguraciones}
-                            trigger={
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="border-green-300 text-green-700 hover:bg-green-50"
-                                    onClick={() => setShowNewConfig(true)}
-                                >
-                                <Plus className="h-3 w-3 mr-1" />
-                                    Nueva Configuración
-                                </Button>
-                            }
-                        />
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-green-300 text-green-700 hover:bg-green-50"
+                            onClick={() => setShowNewConfig(true)}
+                        >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Nueva Configuración
+                        </Button>
                     </div>
+
+                    <ConfiguracionPrestacionesDialog
+                        open={showNewConfig}
+                        onOpenChange={setShowNewConfig}
+                        onConfiguracionSaved={fetchConfiguraciones}
+                    />
 
                     {loading ? (
                         <div className="text-center py-4">Cargando...</div>
@@ -132,10 +137,7 @@ export function SocialBenefitsDialog({ auxilioTransporte }: Props) {
                                                             variant="ghost"
                                                             size="icon"
                                                             className="h-8 w-8 text-blue-600"
-                                                            onClick={() => {
-                                                                setEditar(config);
-                                                                // Abrir diálogo de edición (se puede hacer con el mismo componente)
-                                                            }}
+                                                            onClick={() => handleEditar(config)}
                                                         >
                                                             <Edit className="h-4 w-4" />
                                                         </Button>
@@ -168,10 +170,13 @@ export function SocialBenefitsDialog({ auxilioTransporte }: Props) {
                 </DialogContent>
             </Dialog>
 
-            {/* Modal de edición */}
+            {/* Diálogo de edición */}
             <ConfiguracionPrestacionesDialog
-                open={showNewConfig}
-                onOpenChange={setShowNewConfig}
+                open={!!editar}
+                onOpenChange={(open) => {
+                    if (!open) setEditar(null);
+                }}
+                configuracionEditar={editar}
                 onConfiguracionSaved={fetchConfiguraciones}
             />
 

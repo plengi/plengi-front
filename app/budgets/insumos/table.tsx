@@ -11,9 +11,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowUpDown, Package, MoreHorizontal, Edit, Trash2, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { calculateJornal, calculateJornalWithBenefits } from "@/lib/laborUtils";
 import { formatCurrency } from "@/lib/format";
 import InsumoForm, { Insumo } from './form';
+import { PrestacionesModal } from "@/components/PrestacionesModal";
 
 interface InsumoTableProps {
     insumos: Insumo[];
@@ -22,6 +22,7 @@ interface InsumoTableProps {
     titulo: string;
     descripcion: string;
     icon?: React.ReactNode;
+    config?: any;
 }
 
 export default function InsumoTable({
@@ -31,6 +32,7 @@ export default function InsumoTable({
     titulo,
     descripcion,
     icon,
+    config: configProp,
 }: InsumoTableProps) {
     const { toast } = useToast();
     const [start, setStart] = useState(0);
@@ -41,14 +43,15 @@ export default function InsumoTable({
     const [insumoAEliminar, setInsumoAEliminar] = useState<number | null>(null);
     const [insumoEditar, setInsumoEditar] = useState<Insumo | null>(null);
     const [loadingInsumoHash, setLoadingInsumoHash] = useState<string | null>(null);
-    const [config, setConfig] = useState<any>(null);
+    const [config, setConfig] = useState<any>(configProp);
+    const [insumoPrestaciones, setInsumoPrestaciones] = useState<Insumo | null>(null);
 
-    // Cargar configuración solo para mano de obra
+    // Si no se pasa configProp, lo cargamos localmente (solo para mano de obra)
     useEffect(() => {
-        if (tipoProducto === 2) {
+        if (tipoProducto === 2 && !configProp) {
             apiClient.get("/labor-configuracion").then(res => setConfig(res.data.data)).catch(console.error);
         }
-    }, [tipoProducto]);
+    }, [tipoProducto, configProp]);
 
     useEffect(() => {
         const fetchInsumos = async () => {
@@ -160,6 +163,35 @@ export default function InsumoTable({
         return colors[specialty] || "bg-green-100 text-green-800 border-green-300";
     };
 
+    // Función para calcular total de prestaciones desde JSON
+    const calcularTotalPrestaciones = (manoObra: any) => {
+        if (!manoObra?.prestaciones) return 0;
+        let total = 0;
+        const categorias = ["seguridad_social", "prestaciones", "parafiscales", "otros"] as const;
+        categorias.forEach((cat) => {
+            const factores = manoObra.prestaciones[cat] || [];
+            factores.forEach((f: any) => {
+                if (f.activo) total += f.porcentaje;
+            });
+        });
+        return total;
+    };
+
+    // Función para refrescar la tabla (se usa después de guardar prestaciones)
+    const refreshTable = async () => {
+        setLoadingInsumos(true);
+        try {
+            const response = await apiClient.get(`/productos?tipo_producto=${tipoProducto}&start=${start}&length=${length}`);
+            setInsumos(response.data.data);
+            setTotalRecords(response.data.iTotalRecords);
+            setPromedioInsumos(response.data.valor_promedio || 0);
+        } catch (err) {
+            toast({ variant: "destructive", title: "Error", description: "Error al cargar los insumos" });
+        } finally {
+            setLoadingInsumos(false);
+        }
+    };
+
     return (
         <>
             <InsumoForm
@@ -171,6 +203,7 @@ export default function InsumoTable({
                 descripcion={descripcion}
                 icon={icon}
                 mostrarBotonCrear={false}
+                config={config}
             />
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
@@ -228,7 +261,6 @@ export default function InsumoTable({
                                             <TableHead className="text-green-800">Valor</TableHead>
                                         </>
                                     )}
-                                    <TableHead className="text-green-800">Proveedor</TableHead>
                                     <TableHead className="text-green-800 w-[100px]">Acciones</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -248,12 +280,7 @@ export default function InsumoTable({
                                 ) : (
                                     insumos.map((insumo) => {
                                         const mo = insumo.mano_obra;
-
-                                        const totalPrestaciones = mo?.configuracion_prestaciones?.detalles
-                                            ? mo.configuracion_prestaciones.detalles
-                                                .filter((d: any) => d.activo)
-                                                .reduce((sum: number, d: any) => sum + Number(d.porcentaje), 0)
-                                            : 0;
+                                        const totalPrestaciones = calcularTotalPrestaciones(mo);
                                         return (
                                             <TableRow key={insumo.id} className="hover:bg-green-50/50">
                                                 <TableCell className="font-medium text-green-900">{insumo.nombre}</TableCell>
@@ -263,7 +290,14 @@ export default function InsumoTable({
                                                             {formatCurrency(Math.round(mo.salario_base / config.dias_laborales_mes))}
                                                         </TableCell>
                                                         <TableCell className="text-green-900">
-                                                            {totalPrestaciones.toFixed(2)}%
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => setInsumoPrestaciones(insumo)}
+                                                                className="text-green-600 hover:text-green-800 hover:bg-green-50 font-medium"
+                                                            >
+                                                                {totalPrestaciones.toFixed(2)}%
+                                                            </Button>
                                                         </TableCell>
                                                         <TableCell className="text-green-900 font-bold text-right bg-green-50">
                                                             {formatCurrency(Math.round((mo.salario_base / config.dias_laborales_mes) * (1 + totalPrestaciones / 100)))}
@@ -282,7 +316,6 @@ export default function InsumoTable({
                                                         </TableCell>
                                                     </>
                                                 )}
-                                                <TableCell className="text-green-900">{insumo.tipo_proveedor}</TableCell>
                                                 <TableCell>
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
@@ -374,6 +407,19 @@ export default function InsumoTable({
                 confirmText="Eliminar"
                 loading={loadingInsumoHash === insumoAEliminar?.toString()}
             />
+
+            {insumoPrestaciones && (
+                <PrestacionesModal
+                    open={!!insumoPrestaciones}
+                    onOpenChange={() => setInsumoPrestaciones(null)}
+                    insumo={insumoPrestaciones}
+                    config={config}
+                    onSave={() => {
+                        refreshTable();
+                        setInsumoPrestaciones(null);
+                    }}
+                />
+            )}
         </>
     );
 }
