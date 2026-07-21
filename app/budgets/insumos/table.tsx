@@ -4,6 +4,7 @@ import type React from "react";
 import apiClient from '@/app/api/apiClient';
 import { useEffect, useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +15,15 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/format";
 import InsumoForm, { Insumo } from './form';
 import { PrestacionesModal } from "@/components/PrestacionesModal";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 interface InsumoTableProps {
     insumos: Insumo[];
@@ -47,6 +57,10 @@ export default function InsumoTable({
     const [loadingInsumoHash, setLoadingInsumoHash] = useState<string | null>(null);
     const [config, setConfig] = useState<any>(configProp);
     const [insumoPrestaciones, setInsumoPrestaciones] = useState<Insumo | null>(null);
+    const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
+    const [adjustPercentage, setAdjustPercentage] = useState("");
+    const [adjusting, setAdjusting] = useState(false);
+    const [totalGeneral, setTotalGeneral] = useState(0);
 
     // Si no se pasa configProp, lo cargamos localmente (solo para mano de obra)
     useEffect(() => {
@@ -69,6 +83,7 @@ export default function InsumoTable({
                 });
                 setInsumos(response.data.data);
                 setTotalRecords(response.data.iTotalRecords);
+                setTotalGeneral(response.data.total_general || 0);
                 setPromedioInsumos(response.data.valor_promedio || 0);
             } catch (err) {
                 toast({
@@ -201,6 +216,61 @@ export default function InsumoTable({
         }
     };
 
+    const handleAdjustPrices = async () => {
+        const percentage = parseFloat(adjustPercentage);
+        if (isNaN(percentage)) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Ingresa un porcentaje válido",
+            });
+            return;
+        }
+
+        setAdjusting(true);
+        try {
+            const payload: any = {
+                percentage,
+                tipo_producto: tipoProducto,
+            };
+            if (budgetId) {
+                payload.budget_id = budgetId;
+            }
+
+            await apiClient.post('/productos/ajustar-precios', payload);
+
+            toast({
+                variant: "success",
+                title: "Precios ajustados",
+                description: `Se aplicó un ${percentage}% a todos los ${titulo.toLowerCase()}`,
+            });
+
+            // Recargar la tabla
+            const response = await apiClient.get(`/productos`, {
+                params: {
+                    tipo_producto: tipoProducto,
+                    start,
+                    length,
+                    ...(budgetId && { id_budget: budgetId })
+                }
+            });
+            setInsumos(response.data.data);
+            setTotalRecords(response.data.iTotalRecords);
+            setPromedioInsumos(response.data.valor_promedio || 0);
+
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: error?.response?.data?.message || "Error al ajustar los precios",
+            });
+        } finally {
+            setAdjusting(false);
+            setAdjustDialogOpen(false);
+            setAdjustPercentage("");
+        }
+    };
+
     return (
         <>
             <InsumoForm
@@ -229,16 +299,38 @@ export default function InsumoTable({
 
                 <Card className="border-green-200 bg-gradient-to-br from-white to-green-50">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-green-800">Valor promedio</CardTitle>
-                        <ArrowUpDown className="h-4 w-4 text-green-600" />
+                        <CardTitle className="text-sm font-medium text-green-800">
+                            {budgetId ? "Valor Total" : "Valor promedio"}
+                        </CardTitle>
+                        {budgetId ? (
+                            <Package className="h-4 w-4 text-green-600" />
+                        ) : (
+                            <ArrowUpDown className="h-4 w-4 text-green-600" />
+                        )}
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-green-900">
-                            {typeof promedioInsumos === 'number' ? promedioInsumos.toLocaleString('es-CO') : '0'}
+                            {budgetId
+                                ? formatCurrency(totalGeneral)
+                                : (typeof promedioInsumos === 'number' ? promedioInsumos.toLocaleString('es-CO') : '0')
+                            }
                         </div>
-                        <p className="text-xs text-green-600">Por unidad</p>
+                        <p className="text-xs text-green-600">
+                            {budgetId ? "Suma de todos los insumos" : "Por unidad"}
+                        </p>
                     </CardContent>
                 </Card>
+            </div>
+
+            <div className="flex justify-end mt-4">
+                <Button
+                    variant="outline"
+                    onClick={() => setAdjustDialogOpen(true)}
+                    className="border-green-300 text-green-700 hover:bg-green-50"
+                >
+                    <ArrowUpDown className="h-4 w-4 mr-2" />
+                    Ajustar Precio (%)
+                </Button>
             </div>
 
             <Card className="border-green-200">
@@ -283,6 +375,9 @@ export default function InsumoTable({
                                                 <>
                                                     <TableHead className="text-green-800">Unidad de medida</TableHead>
                                                     <TableHead className="text-green-800">Valor</TableHead>
+                                                    {tipoProducto === 3 && (
+                                                        <TableHead className="text-green-800">Distancia</TableHead>
+                                                    )}
                                                 </>
                                             )}
                                             <TableHead className="text-green-800 w-[100px]">Acciones</TableHead>
@@ -310,7 +405,7 @@ export default function InsumoTable({
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    
+
 
                                     insumos.map((insumo) => {
                                         // ===== MODO PRESUPUESTO (AGRUPADO) =====
@@ -344,7 +439,7 @@ export default function InsumoTable({
                                                     <TableCell className="text-right">{formatCurrency((insumo.valor))}</TableCell>
                                                     <TableCell className="text-right font-bold text-green-900">{formatCurrency(total)}</TableCell>
                                                     <TableCell className="text-right">{porcentaje}%</TableCell>
-                                                    
+
                                                     <TableCell>
                                                         <DropdownMenu>
                                                             <DropdownMenuTrigger asChild>
@@ -418,6 +513,11 @@ export default function InsumoTable({
                                                         <TableCell className="text-green-900">
                                                             {formatCurrency((insumo.valor))}
                                                         </TableCell>
+                                                        {tipoProducto === 3 && (
+                                                            <TableCell className="text-green-900">
+                                                                {insumo.distancia ? insumo.distancia + ' km' : '-'}
+                                                            </TableCell>
+                                                        )}
                                                     </>
                                                 )}
                                                 <TableCell>
@@ -447,7 +547,7 @@ export default function InsumoTable({
                                         );
                                     })
 
-                                    
+
                                 )}
                             </TableBody>
                         </Table>
@@ -503,6 +603,60 @@ export default function InsumoTable({
                     </div>
                 </CardContent>
             </Card>
+
+            {/* ===== DIÁLOGO DE AJUSTE DE PRECIOS ===== */}
+            <Dialog open={adjustDialogOpen} onOpenChange={setAdjustDialogOpen}>
+                <DialogContent className="max-w-md border-green-200">
+                    <DialogHeader>
+                        <DialogTitle className="text-green-900">Ajustar Precios Unitarios</DialogTitle>
+                        <DialogDescription className="text-green-700">
+                            Multiplica todos los precios por un factor. Usa valores positivos para aumentar y negativos para reducir.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="percentage" className="text-green-800">
+                                Factor de Ajuste (%) *
+                            </Label>
+                            <Input
+                                id="percentage"
+                                type="number"
+                                step="0.01"
+                                placeholder="Ej: 10 (para aumentar 10%) o -5 (para reducir 5%)"
+                                value={adjustPercentage}
+                                onChange={(e) => setAdjustPercentage(e.target.value)}
+                                className="border-green-200 focus:border-green-400"
+                            />
+                            <p className="text-xs text-green-600">
+                                Ejemplo: 10 multiplicará los precios por 1.10 | -5 multiplicará por 0.95
+                            </p>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setAdjustDialogOpen(false);
+                                setAdjustPercentage("");
+                            }}
+                            className="border-green-300 text-green-700 hover:bg-green-50"
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            onClick={handleAdjustPrices}
+                            disabled={adjusting}
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                            {adjusting ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                "Aplicar Ajuste"
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             <ConfirmDialog
                 open={insumoAEliminar !== null}

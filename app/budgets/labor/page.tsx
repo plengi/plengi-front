@@ -61,7 +61,7 @@ interface Cuadrilla {
     }[];
 }
 
-// Función para obtener el color de la especialidad (copia de la que tenías)
+// Función para obtener el color de la especialidad
 const getSpecialtyColor = (specialty: string) => {
     const colors: Record<string, string> = {
         "Supervisión": "bg-purple-100 text-purple-800 border-purple-300",
@@ -111,6 +111,7 @@ export default function LaborPage() {
     const [insumoAEliminar, setInsumoAEliminar] = useState<number | null>(null);
     const [loadingInsumoHash, setLoadingInsumoHash] = useState<string | null>(null);
     const [insumoEditar, setInsumoEditar] = useState<Insumo | null>(null);
+    const [budgetName, setBudgetName] = useState('');
 
     // Parámetros base
     const [salarioMinimo, setSalarioMinimo] = useState(498100);
@@ -141,8 +142,6 @@ export default function LaborPage() {
         try {
             const res = await apiClient.get("/labor-configuracion");
             const data = res.data.data;
-            console.log('res: ',res);
-            console.log('data: ',data);
             setConfig(data);
             setSalarioMinimo(data.salario_minimo);
             setAuxilioTransporte(data.auxilio_transporte);
@@ -167,6 +166,19 @@ export default function LaborPage() {
             setLoadingCuadrillas(false);
         }
     };
+
+    // Cargar nombre del presupuesto
+    useEffect(() => {
+        if (isBudgetContext && budgetId) {
+            apiClient.get('/budgets-find', { params: { id_budget: budgetId } })
+                .then(res => {
+                    if (res.data.success) {
+                        setBudgetName(res.data.data.nombre);
+                    }
+                })
+                .catch(console.error);
+        }
+    }, [isBudgetContext, budgetId]);
 
     useEffect(() => {
         if (!loading) {
@@ -259,7 +271,12 @@ export default function LaborPage() {
                             <ArrowLeft className="h-4 w-4 text-green-600" />
                         </Button>
                     )}
-                    <div className="relative flex-1 max-w-md">
+                    <div>
+                        <h1 className="text-lg font-semibold text-green-900">
+                            {isBudgetContext ? `Mano de Obra del Presupuesto: ${budgetName || '...'}` : "Mano de Obra"}
+                        </h1>
+                    </div>
+                    {/* <div className="relative flex-1 max-w-md ml-4">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-green-500" />
                         <Input
                             placeholder="Buscar mano de obra..."
@@ -267,14 +284,14 @@ export default function LaborPage() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="pl-8 border-green-200 focus:border-green-400 focus:ring-green-400"
                         />
-                    </div>
-                    <Button
+                    </div> */}
+                    {/* <Button
                         variant="outline"
                         size="icon"
                         className="border-green-200 hover:bg-green-50 hover:border-green-300 bg-transparent"
                     >
                         <Bell className="h-4 w-4 text-green-600" />
-                    </Button>
+                    </Button> */}
                 </div>
             </header>
 
@@ -283,17 +300,13 @@ export default function LaborPage() {
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight text-green-900">
-                            {isBudgetContext ? "Mano de Obra del Presupuesto" : "Mano de Obra"}
+                            {isBudgetContext ? `Mano de Obra del Presupuesto: ${budgetName || '...'}` : "Mano de Obra"}
                         </h1>
-                        <p className="text-green-700">
-                            {isBudgetContext
-                                ? "Recursos humanos utilizados en los APUs de este presupuesto"
-                                : "Gestiona el catálogo de recursos humanos para tus proyectos"}
-                        </p>
+                        
                     </div>
                     {!isBudgetContext && (
                         <div className="flex gap-2">
-                            {/* Aquí puedes agregar otros botones si los tenías */}
+                            {/* Botones adicionales si los tienes */}
                         </div>
                     )}
                 </div>
@@ -345,184 +358,184 @@ export default function LaborPage() {
                                 </CardContent>
                             </Card>
                         </div>
-
-                        {/* ===== PARÁMETROS BASE Y FACTORES DE CÁLCULO ===== */}
-                        <div className="grid gap-6 md:grid-cols-2">
-                            {/* Parámetros Base */}
-                            <Card className="border-green-200 bg-gradient-to-br from-white to-green-50">
-                                <CardHeader className="flex flex-row items-center justify-between">
-                                    <div>
-                                        <CardTitle className="text-green-900">Parámetros Base</CardTitle>
-                                        <CardDescription className="text-green-700">
-                                            Valores de referencia para cálculos de presupuesto
-                                        </CardDescription>
-                                    </div>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                            if (editingBaseParams) {
-                                                saveConfig();
-                                            } else {
-                                                setEditingBaseParams(true);
-                                            }
-                                        }}
-                                        className="border-green-300 text-green-700 hover:bg-green-50"
-                                    >
-                                        <Edit className="h-4 w-4 mr-1" />
-                                        {editingBaseParams ? "Guardar" : "Editar"}
-                                    </Button>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="overflow-hidden rounded-lg border border-green-200">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow className="bg-green-50">
-                                                    <TableHead className="text-green-800">Concepto</TableHead>
-                                                    <TableHead className="text-green-800 text-right">Valor</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                <TableRow className="hover:bg-green-50/50">
-                                                    <TableCell className="font-medium text-green-900">Salario Mínimo Colombia 2026</TableCell>
-                                                    <TableCell className="text-right">
-                                                        {editingBaseParams ? (
-                                                            <Input
-                                                                type="number"
-                                                                value={salarioMinimo}
-                                                                onChange={(e) => setSalarioMinimo(Number(e.target.value))}
-                                                                className="h-7 w-32 text-right border-green-300 ml-auto"
-                                                            />
-                                                        ) : (
-                                                            <span className="text-green-800 font-semibold">{formatCurrency(salarioMinimo)}</span>
-                                                        )}
-                                                    </TableCell>
-                                                </TableRow>
-                                                <TableRow className="hover:bg-green-50/50">
-                                                    <TableCell className="font-medium text-green-900">Auxilio de Transporte</TableCell>
-                                                    <TableCell className="text-right">
-                                                        {editingBaseParams ? (
-                                                            <Input
-                                                                type="number"
-                                                                value={auxilioTransporte}
-                                                                onChange={(e) => setAuxilioTransporte(Number(e.target.value))}
-                                                                className="h-7 w-32 text-right border-green-300 ml-auto"
-                                                            />
-                                                        ) : (
-                                                            <span className="text-green-800 font-semibold">{formatCurrency(auxilioTransporte)}</span>
-                                                        )}
-                                                    </TableCell>
-                                                </TableRow>
-                                                <TableRow className="hover:bg-green-50/50">
-                                                    <TableCell className="font-medium text-green-900">Días Laborales por Mes</TableCell>
-                                                    <TableCell className="text-right">
-                                                        {editingBaseParams ? (
-                                                            <Input
-                                                                type="number"
-                                                                value={diasLaboralesMes}
-                                                                onChange={(e) => setDiasLaboralesMes(Number(e.target.value))}
-                                                                className="h-7 w-20 text-right border-green-300 ml-auto"
-                                                            />
-                                                        ) : (
-                                                            <span className="text-green-800 font-semibold">{diasLaboralesMes} días</span>
-                                                        )}
-                                                    </TableCell>
-                                                </TableRow>
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            {/* Factores de Cálculo */}
-                            <Card className="border-green-200 bg-gradient-to-br from-white to-green-50">
-                                <CardHeader className="flex flex-row items-center justify-between">
-                                    <div>
-                                        <CardTitle className="text-green-900">Factores de Cálculo</CardTitle>
-                                        <CardDescription className="text-green-700">
-                                            Información adicional para presupuestos
-                                        </CardDescription>
-                                    </div>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                            if (editingCalcFactors) {
-                                                saveConfig();
-                                            } else {
-                                                setEditingCalcFactors(true);
-                                            }
-                                        }}
-                                        className="border-green-300 text-green-700 hover:bg-green-50"
-                                    >
-                                        <Edit className="h-4 w-4 mr-1" />
-                                        {editingCalcFactors ? "Guardar" : "Editar"}
-                                    </Button>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="overflow-hidden rounded-lg border border-green-200">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow className="bg-green-50">
-                                                    <TableHead className="text-green-800">Concepto</TableHead>
-                                                    <TableHead className="text-green-800 text-right">Valor</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                <TableRow className="hover:bg-green-50/50">
-                                                    <TableCell className="font-medium text-green-900">Horas Laborales Diarias</TableCell>
-                                                    <TableCell className="text-right">
-                                                        {editingCalcFactors ? (
-                                                            <Input
-                                                                type="number"
-                                                                value={horasDiarias}
-                                                                onChange={(e) => setHorasDiarias(Number(e.target.value))}
-                                                                className="h-7 w-20 text-right border-green-300 ml-auto"
-                                                            />
-                                                        ) : (
-                                                            <span className="text-green-800 font-semibold">{horasDiarias} horas</span>
-                                                        )}
-                                                    </TableCell>
-                                                </TableRow>
-                                                <TableRow className="hover:bg-green-50/50">
-                                                    <TableCell className="font-medium text-green-900">Horas Laborales Semanales</TableCell>
-                                                    <TableCell className="text-right">
-                                                        {editingCalcFactors ? (
-                                                            <Input
-                                                                type="number"
-                                                                value={horasSemanales}
-                                                                onChange={(e) => setHorasSemanales(Number(e.target.value))}
-                                                                className="h-7 w-20 text-right border-green-300 ml-auto"
-                                                            />
-                                                        ) : (
-                                                            <span className="text-green-800 font-semibold">{horasSemanales} horas</span>
-                                                        )}
-                                                    </TableCell>
-                                                </TableRow>
-                                                <TableRow className="hover:bg-green-50/50">
-                                                    <TableCell className="font-medium text-green-900">Semanas Laborales por Mes</TableCell>
-                                                    <TableCell className="text-right">
-                                                        {editingCalcFactors ? (
-                                                            <Input
-                                                                type="number"
-                                                                step="0.1"
-                                                                value={semanasMes}
-                                                                onChange={(e) => setSemanasMes(Number(e.target.value))}
-                                                                className="h-7 w-20 text-right border-green-300 ml-auto"
-                                                            />
-                                                        ) : (
-                                                            <span className="text-green-800 font-semibold">{semanasMes} semanas</span>
-                                                        )}
-                                                    </TableCell>
-                                                </TableRow>
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
                     </>
                 )}
+
+                {/* ===== PARÁMETROS BASE Y FACTORES DE CÁLCULO (SIEMPRE VISIBLES) ===== */}
+                <div className="grid gap-6 md:grid-cols-2">
+                    {/* Parámetros Base */}
+                    <Card className="border-green-200 bg-gradient-to-br from-white to-green-50">
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle className="text-green-900">Parámetros Base</CardTitle>
+                                <CardDescription className="text-green-700">
+                                    Valores de referencia para cálculos de presupuesto
+                                </CardDescription>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                    if (editingBaseParams) {
+                                        saveConfig();
+                                    } else {
+                                        setEditingBaseParams(true);
+                                    }
+                                }}
+                                className="border-green-300 text-green-700 hover:bg-green-50"
+                            >
+                                <Edit className="h-4 w-4 mr-1" />
+                                {editingBaseParams ? "Guardar" : "Editar"}
+                            </Button>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="overflow-hidden rounded-lg border border-green-200">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="bg-green-50">
+                                            <TableHead className="text-green-800">Concepto</TableHead>
+                                            <TableHead className="text-green-800 text-right">Valor</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        <TableRow className="hover:bg-green-50/50">
+                                            <TableCell className="font-medium text-green-900">Salario Mínimo Colombia 2026</TableCell>
+                                            <TableCell className="text-right">
+                                                {editingBaseParams ? (
+                                                    <Input
+                                                        type="number"
+                                                        value={salarioMinimo}
+                                                        onChange={(e) => setSalarioMinimo(Number(e.target.value))}
+                                                        className="h-7 w-32 text-right border-green-300 ml-auto"
+                                                    />
+                                                ) : (
+                                                    <span className="text-green-800 font-semibold">{formatCurrency(salarioMinimo)}</span>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                        <TableRow className="hover:bg-green-50/50">
+                                            <TableCell className="font-medium text-green-900">Auxilio de Transporte</TableCell>
+                                            <TableCell className="text-right">
+                                                {editingBaseParams ? (
+                                                    <Input
+                                                        type="number"
+                                                        value={auxilioTransporte}
+                                                        onChange={(e) => setAuxilioTransporte(Number(e.target.value))}
+                                                        className="h-7 w-32 text-right border-green-300 ml-auto"
+                                                    />
+                                                ) : (
+                                                    <span className="text-green-800 font-semibold">{formatCurrency(auxilioTransporte)}</span>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                        <TableRow className="hover:bg-green-50/50">
+                                            <TableCell className="font-medium text-green-900">Días Laborales por Mes</TableCell>
+                                            <TableCell className="text-right">
+                                                {editingBaseParams ? (
+                                                    <Input
+                                                        type="number"
+                                                        value={diasLaboralesMes}
+                                                        onChange={(e) => setDiasLaboralesMes(Number(e.target.value))}
+                                                        className="h-7 w-20 text-right border-green-300 ml-auto"
+                                                    />
+                                                ) : (
+                                                    <span className="text-green-800 font-semibold">{diasLaboralesMes} días</span>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Factores de Cálculo */}
+                    <Card className="border-green-200 bg-gradient-to-br from-white to-green-50">
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div>
+                                <CardTitle className="text-green-900">Factores de Cálculo</CardTitle>
+                                <CardDescription className="text-green-700">
+                                    Información adicional para presupuestos
+                                </CardDescription>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                    if (editingCalcFactors) {
+                                        saveConfig();
+                                    } else {
+                                        setEditingCalcFactors(true);
+                                    }
+                                }}
+                                className="border-green-300 text-green-700 hover:bg-green-50"
+                            >
+                                <Edit className="h-4 w-4 mr-1" />
+                                {editingCalcFactors ? "Guardar" : "Editar"}
+                            </Button>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="overflow-hidden rounded-lg border border-green-200">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="bg-green-50">
+                                            <TableHead className="text-green-800">Concepto</TableHead>
+                                            <TableHead className="text-green-800 text-right">Valor</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        <TableRow className="hover:bg-green-50/50">
+                                            <TableCell className="font-medium text-green-900">Horas Laborales Diarias</TableCell>
+                                            <TableCell className="text-right">
+                                                {editingCalcFactors ? (
+                                                    <Input
+                                                        type="number"
+                                                        value={horasDiarias}
+                                                        onChange={(e) => setHorasDiarias(Number(e.target.value))}
+                                                        className="h-7 w-20 text-right border-green-300 ml-auto"
+                                                    />
+                                                ) : (
+                                                    <span className="text-green-800 font-semibold">{horasDiarias} horas</span>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                        <TableRow className="hover:bg-green-50/50">
+                                            <TableCell className="font-medium text-green-900">Horas Laborales Semanales</TableCell>
+                                            <TableCell className="text-right">
+                                                {editingCalcFactors ? (
+                                                    <Input
+                                                        type="number"
+                                                        value={horasSemanales}
+                                                        onChange={(e) => setHorasSemanales(Number(e.target.value))}
+                                                        className="h-7 w-20 text-right border-green-300 ml-auto"
+                                                    />
+                                                ) : (
+                                                    <span className="text-green-800 font-semibold">{horasSemanales} horas</span>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                        <TableRow className="hover:bg-green-50/50">
+                                            <TableCell className="font-medium text-green-900">Semanas Laborales por Mes</TableCell>
+                                            <TableCell className="text-right">
+                                                {editingCalcFactors ? (
+                                                    <Input
+                                                        type="number"
+                                                        step="0.1"
+                                                        value={semanasMes}
+                                                        onChange={(e) => setSemanasMes(Number(e.target.value))}
+                                                        className="h-7 w-20 text-right border-green-300 ml-auto"
+                                                    />
+                                                ) : (
+                                                    <span className="text-green-800 font-semibold">{semanasMes} semanas</span>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
 
                 {/* ===== BOTONES DE CREACIÓN (SOLO VISTA GENERAL) ===== */}
                 {!isBudgetContext && (
@@ -836,7 +849,7 @@ export default function LaborPage() {
     );
 }
 
-// ===== COMPONENTE NUEVA CUADRILLA (se mantiene igual que antes) =====
+// ===== COMPONENTE NUEVA CUADRILLA =====
 function NewCuadrillaDialog({ onCuadrillaAdded }: { onCuadrillaAdded?: () => void }) {
     const [open, setOpen] = useState(false);
     const [manoObra, setManoObra] = useState<Insumo[]>([]);

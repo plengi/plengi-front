@@ -31,7 +31,8 @@ export interface Insumo {
     unidad_medida: string;
     tipo_producto: number;
     valor: number;
-    id_apu?: number | null; // ← AGREGADO
+    id_apu?: number | null;
+    distancia?: number | null;
     mano_obra?: {
         salario_base: number;
         tipo_salario: string;
@@ -77,6 +78,7 @@ export default function InsumoForm({
         tipo_proveedor: '',
         unidad_medida: '',
         valor: '',
+        distancia: '',
         // Para mano de obra
         salario_base: '',
         especialidad: '',
@@ -98,6 +100,7 @@ export default function InsumoForm({
                     tipo_proveedor: insumoEditar.tipo_proveedor,
                     unidad_medida: insumoEditar.unidad_medida,
                     valor: insumoEditar.valor.toString(),
+                    distancia: insumoEditar.distancia?.toString() || '',
                     salario_base: insumoEditar.mano_obra?.salario_base?.toString() || '',
                     especialidad: insumoEditar.mano_obra?.especialidad || '',
                     tipo_salario: insumoEditar.mano_obra?.tipo_salario || 'monthly',
@@ -113,6 +116,7 @@ export default function InsumoForm({
                     tipo_proveedor: '',
                     unidad_medida: '',
                     valor: '',
+                    distancia: '',
                     salario_base: '',
                     especialidad: '',
                     tipo_salario: 'monthly',
@@ -166,6 +170,10 @@ export default function InsumoForm({
                 tipo_producto: tipoProducto,
                 valor: parseFloat(formData.valor) || 0,
             };
+
+            if (tipoProducto === 3) {
+                payload.distancia = parseFloat(formData.distancia) || 0;
+            }
 
             // Si es mano de obra (tipo 2), agregar los campos específicos
             if (tipoProducto === 2) {
@@ -282,6 +290,21 @@ export default function InsumoForm({
                                 required
                             />
                         </div>
+                        {tipoProducto === 3 && (
+                            <div className="space-y-2">
+                                <Label htmlFor="distancia" className="text-green-800">Distancia (km) *</Label>
+                                <Input
+                                    id="distancia"
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="Ej: 15.5"
+                                    value={formData.distancia}
+                                    onChange={(e) => handleChange('distancia', e.target.value)}
+                                    className="border-green-200"
+                                    required
+                                />
+                            </div>
+                        )}
                     </div>)}
 
                     {/* Campos específicos para mano de obra con el nuevo diseño */}
