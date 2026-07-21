@@ -23,6 +23,7 @@ interface InsumoTableProps {
     descripcion: string;
     icon?: React.ReactNode;
     config?: any;
+    budgetId?: number;
 }
 
 export default function InsumoTable({
@@ -32,6 +33,7 @@ export default function InsumoTable({
     titulo,
     descripcion,
     icon,
+    budgetId,
     config: configProp,
 }: InsumoTableProps) {
     const { toast } = useToast();
@@ -57,7 +59,14 @@ export default function InsumoTable({
         const fetchInsumos = async () => {
             setLoadingInsumos(true);
             try {
-                const response = await apiClient.get(`/productos?tipo_producto=${tipoProducto}&start=${start}&length=${length}`);
+                const response = await apiClient.get(`/productos`, {
+                    params: {
+                        tipo_producto: tipoProducto,
+                        start,
+                        length,
+                        ...(budgetId && { id_budget: budgetId }) // ← solo si existe
+                    }
+                });
                 setInsumos(response.data.data);
                 setTotalRecords(response.data.iTotalRecords);
                 setPromedioInsumos(response.data.valor_promedio || 0);
@@ -244,47 +253,136 @@ export default function InsumoTable({
                 </CardHeader>
                 <CardContent>
                     <div className="overflow-hidden rounded-lg border border-green-200">
+
                         <Table>
                             <TableHeader>
                                 <TableRow className="bg-green-50">
-                                    <TableHead className="text-green-800">Nombre</TableHead>
-                                    {tipoProducto === 2 ? (
+                                    {budgetId ? (
+                                        // === MODO PRESUPUESTO (AGRUPADO) ===
                                         <>
-                                            <TableHead className="text-green-800 text-right">Jornal</TableHead>
-                                            <TableHead className="text-green-800">% Prestaciones</TableHead>
-                                            <TableHead className="text-green-800 text-right">Jornal con Prest.</TableHead>
-                                            <TableHead className="text-green-800">Especialidad</TableHead>
+                                            <TableHead className="text-green-800">Nombre</TableHead>
+                                            <TableHead className="text-green-800">Unidad</TableHead>
+                                            <TableHead className="text-green-800 text-right">Cantidad</TableHead>
+                                            <TableHead className="text-green-800 text-right">Valor Unitario</TableHead>
+                                            <TableHead className="text-green-800 text-right">Valor Total</TableHead>
+                                            <TableHead className="text-green-800 text-right">% del Total</TableHead>
+                                            <TableHead className="text-green-800 ">Acciones</TableHead>
                                         </>
                                     ) : (
+                                        // === MODO GENERAL (PRODUCTOS BASE) ===
                                         <>
-                                            <TableHead className="text-green-800">Unidad de medida</TableHead>
-                                            <TableHead className="text-green-800">Valor</TableHead>
+                                            <TableHead className="text-green-800">Nombre</TableHead>
+                                            {tipoProducto === 2 ? (
+                                                <>
+                                                    <TableHead className="text-green-800 text-right">Jornal</TableHead>
+                                                    <TableHead className="text-green-800">% Prestaciones</TableHead>
+                                                    <TableHead className="text-green-800 text-right">Jornal con Prest.</TableHead>
+                                                    <TableHead className="text-green-800">Especialidad</TableHead>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <TableHead className="text-green-800">Unidad de medida</TableHead>
+                                                    <TableHead className="text-green-800">Valor</TableHead>
+                                                </>
+                                            )}
+                                            <TableHead className="text-green-800 w-[100px]">Acciones</TableHead>
                                         </>
                                     )}
-                                    <TableHead className="text-green-800 w-[100px]">Acciones</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {loadingInsumos ? (
                                     <TableRow>
-                                        <TableCell colSpan={tipoProducto === 2 ? 7 : 6} className="text-center">
+                                        <TableCell
+                                            colSpan={budgetId ? 7 : (tipoProducto === 2 ? 6 : 4)}
+                                            className="text-center"
+                                        >
                                             <Loader2 className="h-8 w-8 animate-spin mx-auto text-green-600" />
                                         </TableCell>
                                     </TableRow>
                                 ) : insumos.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={tipoProducto === 2 ? 7 : 6} className="text-center text-green-900">
+                                        <TableCell
+                                            colSpan={budgetId ? 7 : (tipoProducto === 2 ? 6 : 4)}
+                                            className="text-center text-green-900"
+                                        >
                                             No hay {titulo.toLowerCase()} registrados
                                         </TableCell>
                                     </TableRow>
                                 ) : (
+                                    
+
                                     insumos.map((insumo) => {
+                                        // ===== MODO PRESUPUESTO (AGRUPADO) =====
+                                        if (budgetId) {
+                                            // Extendemos el tipo localmente para acceder a propiedades extra
+                                            const insumoBudget = insumo as Insumo & {
+                                                cantidad_agrupada?: number | string;
+                                                total_agrupado?: number | string;
+                                            };
+
+                                            const cantidad = parseFloat(String(insumoBudget.cantidad_agrupada || 0));
+                                            const total = parseFloat(String(insumoBudget.total_agrupado || 0));
+
+                                            const totalGeneral = insumos.reduce(
+                                                (acc, item) => {
+                                                    const itemBudget = item as Insumo & { total_agrupado?: number | string };
+                                                    return acc + parseFloat(String(itemBudget.total_agrupado || 0));
+                                                },
+                                                0
+                                            );
+
+                                            const porcentaje = totalGeneral > 0
+                                                ? ((total / totalGeneral) * 100).toFixed(2)
+                                                : 0;
+
+                                            return (
+                                                <TableRow key={insumo.id} className="hover:bg-green-50/50">
+                                                    <TableCell className="font-medium text-green-900">{insumo.nombre}</TableCell>
+                                                    <TableCell>{insumo.unidad_medida}</TableCell>
+                                                    <TableCell className="text-right">{cantidad.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right">{formatCurrency((insumo.valor))}</TableCell>
+                                                    <TableCell className="text-right font-bold text-green-900">{formatCurrency(total)}</TableCell>
+                                                    <TableCell className="text-right">{porcentaje}%</TableCell>
+                                                    
+                                                    <TableCell>
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                                    <MoreHorizontal className="h-4 w-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="center">
+                                                                <DropdownMenuItem onClick={() => setInsumoEditar(insumo)}>
+                                                                    <Edit className="h-4 w-4 mr-2" />
+                                                                    Editar
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem
+                                                                    onClick={() => eliminarInsumo(insumo.id)}
+                                                                    className="text-red-600"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4 mr-2" />
+                                                                    Eliminar
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        }
+
+                                        // ===== MODO GENERAL (PRODUCTOS BASE) =====
                                         const mo = insumo.mano_obra;
                                         const totalPrestaciones = calcularTotalPrestaciones(mo);
+
                                         return (
                                             <TableRow key={insumo.id} className="hover:bg-green-50/50">
-                                                <TableCell className="font-medium text-green-900">{insumo.nombre}</TableCell>
+                                                <TableCell className="font-medium text-green-900">
+                                                    {insumo.nombre}
+                                                </TableCell>
                                                 {tipoProducto === 2 && mo && config ? (
+                                                    // Mano de obra
                                                     <>
                                                         <TableCell className="text-green-900 text-right">
                                                             {formatCurrency(Math.round(mo.salario_base / config.dias_laborales_mes))}
@@ -303,16 +401,22 @@ export default function InsumoTable({
                                                             {formatCurrency(Math.round((mo.salario_base / config.dias_laborales_mes) * (1 + totalPrestaciones / 100)))}
                                                         </TableCell>
                                                         <TableCell>
-                                                            <Badge className={getSpecialtyColor(mo.especialidad)} variant="outline">
+                                                            <Badge
+                                                                className={getSpecialtyColor(mo.especialidad)}
+                                                                variant="outline"
+                                                            >
                                                                 {mo.especialidad}
                                                             </Badge>
                                                         </TableCell>
                                                     </>
                                                 ) : (
+                                                    // Materiales, Equipos, Transporte
                                                     <>
-                                                        <TableCell className="text-green-900">{insumo.unidad_medida}</TableCell>
                                                         <TableCell className="text-green-900">
-                                                            {Number(insumo.valor).toLocaleString('es-CO')}
+                                                            {insumo.unidad_medida}
+                                                        </TableCell>
+                                                        <TableCell className="text-green-900">
+                                                            {formatCurrency((insumo.valor))}
                                                         </TableCell>
                                                     </>
                                                 )}
@@ -342,6 +446,8 @@ export default function InsumoTable({
                                             </TableRow>
                                         );
                                     })
+
+                                    
                                 )}
                             </TableBody>
                         </Table>

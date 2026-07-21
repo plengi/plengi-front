@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useParams } from "next/navigation"
 import {
     ArrowLeft,
     Calculator,
@@ -18,6 +19,9 @@ import {
     Package,
     Layers,
     Loader2,
+    Wrench,
+    HardHat,
+    Truck
 } from "lucide-react"
 import Link from "next/link"
 
@@ -88,7 +92,7 @@ interface Budget {
 const getEstadoColor = (estado: string) => {
     switch (estado) {
         case "aprobado": return "bg-green-100 text-green-800 border-green-300"
-        case "en_progreso": return "bg-blue-100 text-blue-800 border-blue-300"
+        case "en_progreso": return "bg-green-100 text-blue-800 border-blue-300"
         case "en_revision": return "bg-yellow-100 text-yellow-800 border-yellow-300"
         case "planificacion": return "bg-gray-100 text-gray-800 border-gray-300"
         case "completado": return "bg-purple-100 text-purple-800 border-purple-300"
@@ -107,11 +111,8 @@ const formatEstado = (estado: string) => {
     return map[estado] ?? estado
 }
 
-interface BudgetDetailPageProps {
-    params: { id: string }
-}
-
-export default function BudgetDetailPage({ params }: BudgetDetailPageProps) {
+export default function BudgetDetailPage() {
+    const params = useParams()
     const { id } = params
     const [budget, setBudget] = useState<Budget | null>(null)
     const [loading, setLoading] = useState(true)
@@ -256,12 +257,32 @@ export default function BudgetDetailPage({ params }: BudgetDetailPageProps) {
                             Ver APGs
                         </Button>
                     </Link>
-                    <Link href={`/budgets/${budget.id}/supplies`} className="flex-1 sm:flex-none">
-                        <Button className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white gap-2">
-                            <Package className="h-4 w-4" />
-                            Ver Insumos
-                        </Button>
-                    </Link>
+                    <div className="flex flex-wrap items-center gap-2 border-t border-green-100 px-4 py-3 bg-green-50/50">
+                        <Link href={`/budgets/${budget.id}/supplies?tipo=0`} className="flex-1 sm:flex-none">
+                            <Button className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white gap-2">
+                                <Package className="h-4 w-4" />
+                                Ver Materiales
+                            </Button>
+                        </Link>
+                        <Link href={`/budgets/${budget.id}/supplies?tipo=1`} className="flex-1 sm:flex-none">
+                            <Button className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white gap-2">
+                                <Wrench className="h-4 w-4" />
+                                Ver Equipos
+                            </Button>
+                        </Link>
+                        <Link href={`/budgets/labor?budgetId=${budget.id}`} className="flex-1 sm:flex-none">
+                            <Button className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white gap-2">
+                                <HardHat className="h-4 w-4" />
+                                Ver Mano de Obra
+                            </Button>
+                        </Link>
+                        <Link href={`/budgets/${budget.id}/supplies?tipo=3`} className="flex-1 sm:flex-none">
+                            <Button className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white gap-2">
+                                <Truck className="h-4 w-4" />
+                                Ver Transporte
+                            </Button>
+                        </Link>
+                    </div>
                 </div>
             </header>
 

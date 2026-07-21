@@ -31,6 +31,7 @@ export interface Insumo {
     unidad_medida: string;
     tipo_producto: number;
     valor: number;
+    id_apu?: number | null; // ← AGREGADO
     mano_obra?: {
         salario_base: number;
         tipo_salario: string;
@@ -125,6 +126,12 @@ export default function InsumoForm({
         }
     }, [open, insumoEditar]);
 
+    useEffect(() => {
+    if (insumoEditar) {
+            setOpen(true);
+        }
+    }, [insumoEditar]);
+
     const handleChange = (field: string, value: any) => {
         setFormData((prev: any) => ({ ...prev, [field]: value }));
     };
@@ -162,17 +169,18 @@ export default function InsumoForm({
 
             // Si es mano de obra (tipo 2), agregar los campos específicos
             if (tipoProducto === 2) {
-                // Usamos el salario calculado
                 payload.salario_base = baseSalary;
                 payload.especialidad = formData.especialidad;
                 payload.tipo_salario = formData.tipo_salario;
                 payload.multiplicador = formData.multiplicador ? parseFloat(formData.multiplicador) : null;
                 payload.jornada_horas = parseInt(formData.jornada_horas) || 8;
-                // No enviamos id_configuracion_prestaciones
             }
 
             if (insumoEditar) {
-                await apiClient.put('/productos', { id: insumoEditar.id, ...payload });
+                payload.id = insumoEditar.id;
+                payload.actualizar_detalle = !!insumoEditar.id_apu;
+
+                await apiClient.put('/productos', payload);
                 toast({ variant: "success", title: "Actualizado", description: `${titulo} actualizado correctamente` });
             } else {
                 await apiClient.post('/productos', payload);
